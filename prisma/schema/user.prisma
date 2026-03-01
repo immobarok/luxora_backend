@@ -1,0 +1,100 @@
+// prisma/schema/user.prisma
+
+model User {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  phone        String?
+  avatarUrl    String?
+  role         Role   @default(CUSTOMER)
+
+  status AccountStatus @default(ACTIVE)
+
+  isEmailVerified  Boolean   @default(false)
+  emailVerifiedAt  DateTime?
+  emailVerifyToken String?   @unique
+  isPhoneVerified  Boolean   @default(false)
+  phoneVerifiedAt  DateTime?
+
+  resetPasswordToken   String?   @unique
+  resetPasswordExpires DateTime?
+  twoFactorSecret      String?
+  twoFactorEnabled     Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+  lastLoginIp String?
+
+  profile        UserProfile?
+  addresses      Address[]
+  orders         Order[]
+  reviews        Review[]
+  cart           Cart?
+  wishlist       Wishlist?
+  notifications  Notification[]
+  products       Product[]     @relation("CreatedBy")
+  coupons        Coupon[]      @relation("CreatedBy")
+  adminActions   AdminAction[] @relation("AdminActions")
+  paymentMethods PaymentMethod[]
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model UserProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  bio         String?
+  dateOfBirth DateTime?
+  gender      Gender?
+
+  preferredCategories String[]
+  preferredSizes      String[]
+  styleTags           String[]
+
+  emailMarketingConsent     Boolean   @default(false)
+  smsMarketingConsent       Boolean   @default(false)
+  marketingConsentUpdatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model Address {
+  id        String  @id @default(cuid())
+  userId    String
+  type      String
+  isDefault Boolean @default(false)
+
+  firstName String
+  lastName  String
+  phone     String
+
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  postalCode String
+  country    String
+
+  isVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[] @relation("ShippingAddress")
+  billingOrders Order[] @relation("BillingAddress")
+
+  @@index([userId])
+  @@map("addresses")
+}

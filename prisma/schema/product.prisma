@@ -1,0 +1,202 @@
+// prisma/schema/product.prisma
+
+model Category {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  description String?
+  imageUrl    String?
+  parentId    String?
+  level       Int     @default(0)
+
+  metaTitle       String?
+  metaDescription String?
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  products ProductCategory[]
+
+  @@index([slug])
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Brand {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  description String?
+  logoUrl     String?
+  website     String?
+  isVerified  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([slug])
+  @@map("brands")
+}
+
+model Product {
+  id               String        @id @default(cuid())
+  slug             String        @unique
+  sku              String        @unique
+  name             String
+  description      String        @db.Text
+  shortDescription String?
+
+  createdBy String
+  brandId   String?
+
+  gender Gender
+  status ProductStatus @default(DRAFT)
+
+  basePrice      Decimal  @db.Decimal(10, 2)
+  compareAtPrice Decimal? @db.Decimal(10, 2)
+  costPrice      Decimal? @db.Decimal(10, 2)
+
+  trackInventory Boolean @default(true)
+  allowBackorder Boolean @default(false)
+
+  weight         Decimal? @db.Decimal(8, 2)
+  dimensions     Json?
+  isFreeShipping Boolean  @default(false)
+
+  metaTitle       String?
+  metaDescription String?
+  keywords        String[]
+
+  isFeatured   Boolean @default(false)
+  isNewArrival Boolean @default(false)
+  isBestSeller Boolean @default(false)
+  isSale       Boolean @default(false)
+
+  avgRating   Float   @default(0)
+  reviewCount Int     @default(0)
+  totalSales  Int     @default(0)
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  creator       User               @relation("CreatedBy", fields: [createdBy], references: [id])
+  brand         Brand?             @relation(fields: [brandId], references: [id])
+  categories    ProductCategory[]
+  media         ProductMedia[]
+  variants      ProductVariant[]
+  attributes    ProductAttribute[]
+  reviews       Review[]
+  wishlistItems WishlistItem[]
+
+  @@index([slug])
+  @@index([createdBy])
+  @@index([brandId])
+  @@index([status])
+  @@index([gender])
+  @@index([isFeatured])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+  @@map("product_categories")
+}
+
+model ProductMedia {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  type      String
+  position  Int     @default(0)
+  altText   String?
+  isPrimary Boolean @default(false)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_media")
+}
+
+model ProductAttribute {
+  id          String @id @default(cuid())
+  productId   String
+  name        String
+  value       String
+  displayType String @default("text")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_attributes")
+}
+
+model ProductVariant {
+  id        String @id @default(cuid())
+  productId String
+  sku       String @unique
+
+  options Json
+
+  price     Decimal  @db.Decimal(10, 2)
+  salePrice Decimal? @db.Decimal(10, 2)
+
+  stockStatus       StockStatus @default(IN_STOCK)
+  quantity          Int         @default(0)
+  reservedQuantity  Int         @default(0)
+  lowStockThreshold Int         @default(5)
+
+  barcode String?
+  upc     String?
+
+  mediaUrls String[]
+
+  weight     Decimal? @db.Decimal(8, 2)
+  dimensions Json?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryLogs InventoryLog[]
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+
+  @@index([productId])
+  @@index([sku])
+  @@index([stockStatus])
+  @@map("product_variants")
+}
+
+model InventoryLog {
+  id        String   @id @default(cuid())
+  variantId String
+  type      String
+  quantity  Int
+  reason    String?
+  reference String?
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([variantId])
+  @@index([createdAt])
+  @@map("inventory_logs")
+}

@@ -1,0 +1,82 @@
+// prisma/schema/admin.prisma
+
+model Review {
+  id        String @id @default(cuid())
+  productId String
+  userId    String
+  orderId   String?
+
+  rating    Int     @db.SmallInt
+  title     String?
+  body      String  @db.Text
+  isVerifiedPurchase Boolean @default(false)
+
+  images String[]
+
+  status String @default("PENDING")
+
+  helpfulCount   Int @default(0)
+  unhelpfulCount Int @default(0)
+
+  vendorResponse    String?  @db.Text
+  vendorRespondedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([productId, userId, orderId])
+  @@index([productId])
+  @@index([userId])
+  @@index([status])
+  @@map("reviews")
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+
+  type  NotificationType
+  title String
+  body  String
+  data  Json?
+
+  channels  String[]
+  emailSent Boolean @default(false)
+  pushSent  Boolean @default(false)
+  smsSent   Boolean @default(false)
+
+  isRead Boolean  @default(false)
+  readAt DateTime?
+
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model AdminAction {
+  id         String @id @default(cuid())
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+
+  reason   String
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminActions", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@map("admin_actions")
+}
