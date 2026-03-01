@@ -1,54 +1,108 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
-import {
-  LoggingInterceptor,
-  TimeoutInterceptor,
-  TransformInterceptor,
-  ErrorInterceptor,
-  PerformanceInterceptor,
-} from './common/interceptors';
-import {
-  CorrelationIdMiddleware,
-  HelmetHeadersMiddleware,
-} from './common/middleware';
+import { NestFactory } from '@nestjs/core';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { HttpExceptionFilter, AllExceptionsFilter } from './common/filter';
+import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
+import { AppModule } from './app.module';
 
-import { AuthModule } from './auth/auth.module';
-import { RedisModule } from './redis/redis.module';
-import { MailModule } from './mail/mail.module';
+async function bootstrap() {
+  // ── Create Application ─────────────────────────────────────
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+    logger:
+      process.env.NODE_ENV === 'production'
+        ? ['error', 'warn', 'log']
+        : ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
-import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
-import { RolesGuard } from './auth/guards/roles.guard';
-import { ConfigModule } from '@nestjs/config';
+  const logger = new Logger('Bootstrap');
+  const configService = app.get(ConfigService);
 
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    PrismaModule,
-    AuthModule,
-    RedisModule,
-    MailModule,
-  ],
-  controllers: [AppController],
-  providers: [
-    AppService,
-    // --- Global Guards (JwtAuth first, then Roles) ---
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: RolesGuard },
-    // --- Global Interceptors (order matters – first registered = outermost) ---
-    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: PerformanceInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: ErrorInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
-  ],
-})
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(CorrelationIdMiddleware, HelmetHeadersMiddleware)
-      .forRoutes('*');
-  }
+  // ── Global Prefix ──────────────────────────────────────────
+  app.setGlobalPrefix('api', {
+    exclude: [],
+  });
+
+  // ── API Versioning ─────────────────────────────────────────
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
+
+  // ── CORS ───────────────────────────────────────────────────
+  const allowedOrigins = configService.get<string>('CORS_ORIGINS', '*');
+  app.enableCors({
+    origin: allowedOrigins === '*' ? true : allowedOrigins.split(','),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Correlation-Id',
+      'X-Requested-With',
+      'Accept',
+    ],
+    exposedHeaders: ['X-Correlation-Id'],
+    credentials: true,
+    maxAge: 3600,
+  });
+
+  // ── Global Pipes ───────────────────────────────────────────
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+
+  // ── Global Filters (outermost → innermost) ─────────────────
+  app.useGlobalFilters(new AllExceptionsFilter(), new HttpExceptionFilter());
+
+  // ── Graceful Shutdown ──────────────────────────────────────
+  app.enableShutdownHooks();
+
+  // ── Trust Proxy (for correct IP behind load-balancers) ─────
+  const expressApp = app
+    .getHttpAdapter()
+    .getInstance() as import('express').Express;
+  expressApp.set('trust proxy', 1);
+
+  // ── Body Size Limits ───────────────────────────────────────
+  const bodyLimit = configService.get<string>('BODY_LIMIT', '10mb');
+  const { json, urlencoded } = await import('express');
+  app.use(
+    json({
+      limit: bodyLimit,
+      verify: (req: any, _res, buf) => {
+        // Preserve the raw body for Stripe webhook signature verification
+        req.rawBody = buf;
+      },
+    }),
+  );
+  app.use(urlencoded({ extended: true, limit: bodyLimit }));
+
+  // ── Redis WebSocket Adapter ──────────────────────────────
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
+
+  // ── Start Server ───────────────────────────────────────────
+  const port = configService.get<number>('PORT', 3000);
+  const host = configService.get<string>('HOST', '0.0.0.0');
+
+  await app.listen(port, host);
+
+  const url = await app.getUrl();
+  logger.log(`🚀 Application running on: ${url}`);
+  logger.log(`📄 Environment: ${process.env.NODE_ENV ?? 'development'}`);
+  logger.log(`🔗 API Base: ${url}/api/v1`);
 }
+
+bootstrap().catch((err) => {
+  const logger = new Logger('Bootstrap');
+  logger.error('❌ Application failed to start', err.stack ?? err);
+  process.exit(1);
+});
