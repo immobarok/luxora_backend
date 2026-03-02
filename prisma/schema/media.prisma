@@ -1,0 +1,46 @@
+model Media {
+  id           String        @id @default(cuid())
+  uploaderId   String
+  filename     String        
+  originalName String        
+  mimeType     String        
+  extension    String        
+  size         Int           
+  category     MediaCategory 
+  url          String        
+  
+  alt          String?
+  title        String?
+  
+  width        Int?
+  height       Int?
+  aspectRatio  Float?
+  
+  duration     Int?
+  thumbnailUrl String?
+  
+  folder       String?
+  tags         String[]
+  
+  downloadCount Int     @default(0)
+  viewCount     Int     @default(0)
+  
+  isDeleted    Boolean  @default(false)
+  deletedAt    DateTime?
+  
+  productId    String?
+  product      Product? @relation("ProductMedia", fields: [productId], references: [id], onDelete: SetNull)
+  uploader     User     @relation("UserMedia", fields: [uploaderId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([uploaderId, createdAt])
+  @@index([category, createdAt])
+  @@index([isDeleted, createdAt])
+  @@index([productId])
+  @@index([tags])
+  @@index([folder])
+  
+  @@map("media")
+}

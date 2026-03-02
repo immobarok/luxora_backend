@@ -32,6 +32,15 @@ enum ProductStatus {
   SEASONAL
 }
 
+enum MediaCategory {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  AUDIO
+  ARCHIVE
+  OTHER
+}
+
 enum StockStatus {
   IN_STOCK
   LOW_STOCK

@@ -90,7 +90,8 @@ model Product {
   creator       User               @relation("CreatedBy", fields: [createdBy], references: [id])
   brand         Brand?             @relation(fields: [brandId], references: [id])
   categories    ProductCategory[]
-  media         ProductMedia[]
+  media         Media[]            @relation("ProductMedia")
+  
   variants      ProductVariant[]
   attributes    ProductAttribute[]
   reviews       Review[]
@@ -105,7 +106,6 @@ model Product {
   @@index([createdAt])
   @@map("products")
 }
-
 model ProductCategory {
   productId  String
   categoryId String
@@ -118,20 +118,6 @@ model ProductCategory {
   @@map("product_categories")
 }
 
-model ProductMedia {
-  id        String  @id @default(cuid())
-  productId String
-  url       String
-  type      String
-  position  Int     @default(0)
-  altText   String?
-  isPrimary Boolean @default(false)
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@map("product_media")
-}
 
 model ProductAttribute {
   id          String @id @default(cuid())

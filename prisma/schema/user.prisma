@@ -38,6 +38,7 @@ model User {
   products       Product[]     @relation("CreatedBy")
   coupons        Coupon[]      @relation("CreatedBy")
   adminActions   AdminAction[] @relation("AdminActions")
+   media          Media[]       @relation("UserMedia")
   paymentMethods PaymentMethod[]
 
   @@index([email])
