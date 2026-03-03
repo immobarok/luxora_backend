@@ -6,7 +6,6 @@ import {
   IsNumber,
   IsArray,
   ValidateNested,
-  IsUUID,
   IsBoolean,
   Min,
   ArrayMinSize,
@@ -180,7 +179,7 @@ export class CreateProductDto {
   costPrice?: number;
 
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsString({ each: true })
   @IsOptional()
   mediaIds?: string[];
 

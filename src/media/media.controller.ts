@@ -27,7 +27,7 @@ import type { Request } from 'express';
 
 interface AuthenticatedRequest extends Request {
   user: {
-    userId: string;
+    id: string;
   };
 }
 
@@ -43,7 +43,7 @@ export class MediaController {
     @Body() dto: UploadFileDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.mediaService.uploadSingle(file, req.user.userId, dto);
+    return this.mediaService.uploadSingle(file, req.user.id, dto);
   }
 
   @Post('upload-multiple')
@@ -53,7 +53,7 @@ export class MediaController {
     @Body() dto: UploadFileDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.mediaService.uploadMultiple(files, req.user.userId, dto);
+    return this.mediaService.uploadMultiple(files, req.user.id, dto);
   }
 
   @Get()
@@ -63,7 +63,7 @@ export class MediaController {
     @Req() req: AuthenticatedRequest,
     @Query('category') category?: MediaCategory,
   ) {
-    return this.mediaService.findByUser(req.user.userId, {
+    return this.mediaService.findByUser(req.user.id, {
       category,
       page,
       limit,
@@ -75,7 +75,7 @@ export class MediaController {
     @Param('id', ParseCuidPipe) id: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.mediaService.findById(id, req.user.userId);
+    return this.mediaService.findById(id, req.user.id);
   }
 
   @Patch(':id')
@@ -86,7 +86,7 @@ export class MediaController {
     @UploadedFile() file: UploadedFileType,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.mediaService.update(id, req.user.userId, {
+    return this.mediaService.update(id, req.user.id, {
       alt: dto.alt,
       file,
     });
@@ -97,7 +97,7 @@ export class MediaController {
     @Param('id', ParseCuidPipe) id: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    await this.mediaService.delete(id, req.user.userId);
+    await this.mediaService.delete(id, req.user.id);
     return { message: 'Deleted successfully' };
   }
 
@@ -106,6 +106,6 @@ export class MediaController {
     @Body() dto: { ids: string[] },
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.mediaService.deleteMany(dto.ids, req.user.userId);
+    return this.mediaService.deleteMany(dto.ids, req.user.id);
   }
 }

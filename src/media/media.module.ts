@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import mediaConfig from '../config/media.config';
+import mediaConfig from './config/media.config';
 
 import { FileValidatorService } from './services/file-validator.service';
 import { PathGeneratorService } from './services/path-generator.service';
