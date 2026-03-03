@@ -24,6 +24,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { MailModule } from './mail/mail.module';
 import { ProductModule } from './product/product.module';
 import { CategoryModule } from './category/category.module';
+import { BrandModule } from './brand/brand.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CategoryModule } from './category/category.module';
     MailModule,
     ProductModule,
     CategoryModule,
+    BrandModule,
   ],
   controllers: [AppController],
   providers: [
