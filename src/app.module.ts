@@ -22,6 +22,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { MailModule } from './mail/mail.module';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MailModule } from './mail/mail.module';
     AuthModule,
     RedisModule,
     MailModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [

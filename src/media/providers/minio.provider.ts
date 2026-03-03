@@ -19,10 +19,27 @@ export class MinioProvider implements StorageProvider, OnModuleInit {
     this.useSSL = this.configService.get<boolean>('media.MINIO_USE_SSL', false);
   }
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
     this.initializeClient();
-    await this.validateBucket();
-    await this.configurePublicAccess();
+    // Wrap in setImmediate to avoid blocking the main thread during startup
+    setImmediate(() => {
+      this.initializeBucketAsync().catch(() => {
+        // Error already logged in initializeBucketAsync
+      });
+    });
+  }
+
+  private async initializeBucketAsync(): Promise<void> {
+    try {
+      await this.validateBucket();
+      await this.configurePublicAccess();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        'MinIO bucket validation failed - moving forward',
+        message,
+      );
+    }
   }
 
   private initializeClient(): void {

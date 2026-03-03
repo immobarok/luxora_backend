@@ -10,7 +10,6 @@ import {
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
-  ParseUUIDPipe,
   ParseIntPipe,
   DefaultValuePipe,
   Req,
@@ -19,6 +18,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ParseCuidPipe } from 'src/common/pipes/parse-cuid.pipe';
 import { MediaCategory } from '@prisma/client';
 import { MediaService } from './media.service';
 import type { UploadFileDto } from './media.service';
@@ -72,7 +72,7 @@ export class MediaController {
 
   @Get(':id')
   async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseCuidPipe) id: string,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.mediaService.findById(id, req.user.userId);
@@ -81,7 +81,7 @@ export class MediaController {
   @Patch(':id')
   @UseInterceptors(FileInterceptor('file'))
   async update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseCuidPipe) id: string,
     @Body() dto: { alt?: string },
     @UploadedFile() file: UploadedFileType,
     @Req() req: AuthenticatedRequest,
@@ -94,7 +94,7 @@ export class MediaController {
 
   @Delete(':id')
   async delete(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseCuidPipe) id: string,
     @Req() req: AuthenticatedRequest,
   ) {
     await this.mediaService.delete(id, req.user.userId);

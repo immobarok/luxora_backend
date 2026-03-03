@@ -229,16 +229,21 @@ export class MailService implements OnModuleInit {
   onModuleInit(): void {
     this.initializeTransporter();
     this.verifyConnection().catch((err) => {
-      this.logger.error('Failed to initialize mail service', err);
-      throw err;
+      this.logger.warn(
+        'Mail service verification failed - moving forward',
+        err.message,
+      );
     });
   }
 
   private initializeTransporter(): void {
+    const port = Number(this.configService.getOrThrow('MAIL_PORT'));
+    const secure = this.configService.get('MAIL_SECURE') === 'true';
+
     const config: SmtpConfig = {
       host: this.configService.getOrThrow<string>('MAIL_HOST'),
-      port: this.configService.getOrThrow<number>('MAIL_PORT'),
-      secure: this.configService.get<boolean>('MAIL_SECURE', false),
+      port,
+      secure,
       auth: {
         user: this.configService.getOrThrow<string>('MAIL_USER'),
         pass: this.configService.getOrThrow<string>('MAIL_PASSWORD'),
@@ -248,6 +253,13 @@ export class MailService implements OnModuleInit {
       rateDelta: 1000,
       rateLimit: 5,
     };
+
+    // If using port 587, we must NOT use implicit TLS (secure: true)
+    // We use requireTLS to ensure it upgrades to STARTTLS
+    if (!secure && port === 587) {
+      (config as any).requireTLS = true;
+      (config as any).tls = { rejectUnauthorized: false };
+    }
 
     this.transporter = nodemailer.createTransport(config);
 
