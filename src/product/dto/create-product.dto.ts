@@ -252,4 +252,8 @@ export class CreateProductDto {
   @IsEnum(ProductStatus)
   @IsOptional()
   status?: ProductStatus = ProductStatus.DRAFT;
+
+  @IsBoolean()
+  @IsOptional()
+  isFeatured?: boolean = false;
 }

@@ -238,6 +238,8 @@ export class ProductService {
     }
     if (dto.keywords !== undefined) updateData.keywords = dto.keywords;
 
+    if (dto.isFeatured !== undefined) updateData.isFeatured = dto.isFeatured;
+
     if (dto.brandId !== undefined) {
       if (dto.brandId) {
         await this.validateBrand(dto.brandId);
@@ -605,7 +607,7 @@ export class ProductService {
       metaTitle: dto.metaTitle ?? dto.name,
       metaDescription: dto.metaDescription ?? dto.shortDescription,
       keywords: dto.keywords ?? [],
-      isFeatured: false,
+      isFeatured: dto.isFeatured ?? false,
       isNewArrival: true,
       isBestSeller: false,
       isSale: dto.compareAtPrice ? dto.basePrice < dto.compareAtPrice : false,
