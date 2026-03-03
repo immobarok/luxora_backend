@@ -18,7 +18,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { ParseCuidPipe } from 'src/common/pipes/parse-cuid.pipe';
+import { ParseCuidPipe } from '../common/pipes/parse-cuid.pipe';
 import { MediaCategory } from '@prisma/client';
 import { MediaService } from './media.service';
 import type { UploadFileDto } from './media.service';

@@ -23,6 +23,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { MailModule } from './mail/mail.module';
 import { ProductModule } from './product/product.module';
+import { CategoryModule } from './category/category.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ProductModule } from './product/product.module';
     RedisModule,
     MailModule,
     ProductModule,
+    CategoryModule,
   ],
   controllers: [AppController],
   providers: [

@@ -7,9 +7,10 @@ import { SetMetadata } from '@nestjs/common';
  * prevents typos and enables IDE auto-complete.
  */
 export enum Role {
+  CUSTOMER = 'CUSTOMER',
   ADMIN = 'ADMIN',
-  USER = 'USER',
-  GUEST = 'GUEST',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  SUPPORT = 'SUPPORT',
 }
 
 /**
