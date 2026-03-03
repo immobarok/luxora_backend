@@ -11,7 +11,7 @@ import {
   Min,
   ArrayMinSize,
   Length,
-  Matches,
+  // Matches,
   IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -28,10 +28,16 @@ export class VariantOptionDto {
 }
 
 export class CreateVariantDto {
+  /*
   @IsString()
   @IsNotEmpty()
   @Length(3, 50)
   sku!: string;
+  */
+  @IsString()
+  @IsOptional()
+  @Length(3, 50)
+  sku?: string;
 
   @IsArray()
   @ArrayMinSize(1)
@@ -145,11 +151,13 @@ export class CreateProductDto {
   @Length(0, 500)
   shortDescription?: string;
 
+  /*
   @IsString()
   @IsNotEmpty()
   @Length(3, 50)
   @Matches(/^[a-zA-Z0-9-_]+$/)
   sku!: string;
+  */
 
   @IsEnum(Gender)
   gender!: Gender;
@@ -176,12 +184,12 @@ export class CreateProductDto {
   @IsOptional()
   mediaIds?: string[];
 
-  @IsUUID()
+  @IsString()
   @IsOptional()
   brandId?: string;
 
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsString({ each: true })
   @IsOptional()
   categoryIds?: string[];
 

@@ -39,19 +39,38 @@ export class ProductService {
   ) {}
 
   async create(adminId: string, dto: CreateProductDto) {
-    await this.ensureSkuUnique(dto.sku);
-
+    this.logger.log(`Creating product: ${dto.name} by admin ${adminId}`);
+    // Check constraints before generating any unique values
     if (dto.variants?.length) {
       await this.validateVariantSkus(dto.variants);
+    }
+    if (dto.brandId) {
+      await this.validateBrand(dto.brandId);
+    }
+    if (dto.categoryIds?.length) {
+      await this.validateCategories(dto.categoryIds);
     }
     if (dto.mediaIds?.length) {
       await this.validateMediaIds(dto.mediaIds, adminId);
     }
 
+    const sku = await this.generateSku(dto.name);
     const slug = await this.generateUniqueSlug(dto.name);
+
+    // Auto-generate variant SKUs if missing
+    if (dto.variants) {
+      dto.variants.forEach((variant) => {
+        if (!variant.sku) {
+          variant.sku = this.generateVariantSku(sku, variant.options);
+        }
+      });
+      // Re-validate now that we have SKUs
+      await this.validateVariantSkus(dto.variants);
+    }
+
     const product = await this.prisma.$transaction(async (tx) => {
       const created = await tx.product.create({
-        data: this.buildCreateInput(adminId, slug, dto),
+        data: this.buildCreateInput(adminId, slug, sku, dto),
         include: PRODUCT_INCLUDE,
       });
 
@@ -220,12 +239,16 @@ export class ProductService {
     if (dto.keywords !== undefined) updateData.keywords = dto.keywords;
 
     if (dto.brandId !== undefined) {
+      if (dto.brandId) {
+        await this.validateBrand(dto.brandId);
+      }
       updateData.brand = dto.brandId
         ? { connect: { id: dto.brandId } }
         : { disconnect: true };
     }
 
     if (dto.categoryIds) {
+      await this.validateCategories(dto.categoryIds);
       updateData.categories = {
         deleteMany: {},
         create: dto.categoryIds.map((categoryId) => ({
@@ -246,11 +269,18 @@ export class ProductService {
     }
 
     if (dto.variants) {
+      // Auto-generate variant SKUs if missing
+      dto.variants.forEach((variant) => {
+        if (!variant.sku) {
+          variant.sku = this.generateVariantSku(existing.sku, variant.options);
+        }
+      });
+
       await this.validateVariantSkus(dto.variants, id);
       updateData.variants = {
         deleteMany: {},
         create: dto.variants.map((variant) => ({
-          sku: variant.sku,
+          sku: variant.sku!, // Safe assertion after auto-generation
           options: variant.options as unknown as Prisma.InputJsonValue,
           price: variant.price,
           salePrice: variant.salePrice,
@@ -393,6 +423,29 @@ export class ProductService {
     ]);
   }
 
+  private async validateBrand(brandId: string): Promise<void> {
+    const brand = await this.prisma.brand.findUnique({
+      where: { id: brandId },
+    });
+    if (!brand) {
+      throw new NotFoundException(`Brand with ID "${brandId}" not found`);
+    }
+  }
+
+  private async validateCategories(categoryIds: string[]): Promise<void> {
+    const categories = await this.prisma.category.findMany({
+      where: { id: { in: categoryIds } },
+      select: { id: true },
+    });
+    const foundIds = new Set(categories.map((c) => c.id));
+    const missing = categoryIds.filter((id) => !foundIds.has(id));
+    if (missing.length > 0) {
+      throw new NotFoundException(
+        `Categories not found: ${missing.join(', ')}`,
+      );
+    }
+  }
+
   private async ensureSkuUnique(sku: string): Promise<void> {
     const exists = await this.prisma.product.findUnique({ where: { sku } });
     if (exists) {
@@ -401,29 +454,39 @@ export class ProductService {
   }
 
   private async validateVariantSkus(
-    variants: { sku: string }[],
+    variants: { sku?: string }[],
     productId?: string,
   ): Promise<void> {
     const skuSet = new Set<string>();
     for (const variant of variants) {
-      if (skuSet.has(variant.sku)) {
-        throw new BadRequestException(`Duplicate variant SKU "${variant.sku}"`);
+      if (variant.sku) {
+        if (skuSet.has(variant.sku)) {
+          throw new BadRequestException(
+            `Duplicate variant SKU "${variant.sku}"`,
+          );
+        }
+        skuSet.add(variant.sku);
       }
-      skuSet.add(variant.sku);
     }
 
-    const existing = await this.prisma.productVariant.findMany({
-      where: {
-        sku: { in: variants.map((variant) => variant.sku) },
-        ...(productId ? { productId: { not: productId } } : {}),
-      },
-      select: { sku: true },
-    });
+    const skusToCheck = variants
+      .map((v) => v.sku)
+      .filter((sku): sku is string => !!sku);
 
-    if (existing.length > 0) {
-      throw new ConflictException(
-        `Variant SKU already exists: ${existing.map((item) => item.sku).join(', ')}`,
-      );
+    if (skusToCheck.length > 0) {
+      const existing = await this.prisma.productVariant.findMany({
+        where: {
+          sku: { in: skusToCheck },
+          ...(productId ? { productId: { not: productId } } : {}),
+        },
+        select: { sku: true },
+      });
+
+      if (existing.length > 0) {
+        throw new ConflictException(
+          `Variant SKU already exists: ${existing.map((item) => item.sku).join(', ')}`,
+        );
+      }
     }
   }
 
@@ -470,6 +533,43 @@ export class ProductService {
     return slug;
   }
 
+  private async generateSku(name: string): Promise<string> {
+    const prefix = name
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 3)
+      .toUpperCase();
+    const random = Math.floor(1000 + Math.random() * 9000); // 4 digit random
+    let sku = `${prefix}-${random}`;
+    let counter = 1;
+
+    // Ensure uniqueness
+    while (await this.prisma.product.findUnique({ where: { sku } })) {
+      sku = `${prefix}-${random}-${counter}`;
+      counter++;
+    }
+
+    return sku;
+  }
+
+  private generateVariantSku(
+    productSku: string,
+    options: { value: string }[],
+  ): string {
+    const parts = [productSku];
+    for (const opt of options) {
+      const val = opt.value
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toUpperCase()
+        .substring(0, 3);
+      parts.push(val || 'OPT');
+    }
+    // Add randomness to ensure uniqueness if options are identical/empty
+    if (options.length === 0) {
+      parts.push(Math.floor(1000 + Math.random() * 9000).toString());
+    }
+    return parts.join('-');
+  }
+
   private slugify(value: string): string {
     return value
       .toLowerCase()
@@ -483,11 +583,12 @@ export class ProductService {
   private buildCreateInput(
     adminId: string,
     slug: string,
+    sku: string,
     dto: CreateProductDto,
   ): Prisma.ProductCreateInput {
     return {
       slug,
-      sku: dto.sku,
+      sku: sku,
       name: dto.name,
       description: dto.description,
       shortDescription: dto.shortDescription,
@@ -533,7 +634,7 @@ export class ProductService {
       variants: dto.variants
         ? {
             create: dto.variants.map((variant) => ({
-              sku: variant.sku,
+              sku: variant.sku!,
               options: variant.options as unknown as Prisma.InputJsonValue,
               price: variant.price,
               salePrice: variant.salePrice,
@@ -638,6 +739,9 @@ export class ProductService {
 
   private deepConvert(value: unknown): unknown {
     if (value === null || value === undefined) return value;
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
     if (Array.isArray(value)) {
       return value.map((item) => this.deepConvert(item));
     }
