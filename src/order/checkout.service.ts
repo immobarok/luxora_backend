@@ -5,7 +5,19 @@ import { OrderService } from './order.service';
 import { CartService } from '../cart/cart.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckoutDto, CheckoutResult } from './dto';
-import { PaymentMethodType } from '@prisma/client';
+import { PaymentMethodType, PaymentStatus } from '@prisma/client';
+import { CartEntity } from '../cart/entities/cart.entity';
+
+export interface CheckoutValidationResult {
+  isValid: boolean;
+  issues: string[];
+  cart: CartEntity;
+}
+
+interface PaymentProcessResult {
+  status: PaymentStatus;
+  redirectUrl?: string;
+}
 
 @Injectable()
 export class CheckoutService {
@@ -16,7 +28,7 @@ export class CheckoutService {
   ) {}
 
   // Validate checkout
-  async validateCheckout(userId: string): Promise<any> {
+  async validateCheckout(userId: string): Promise<CheckoutValidationResult> {
     const cart = await this.cartService.getCart(userId);
     const issues: string[] = [];
 
@@ -88,7 +100,7 @@ export class CheckoutService {
     orderId: string,
     amount: number,
     method: PaymentMethodType,
-  ): Promise<any> {
+  ): Promise<PaymentProcessResult> {
     // Integrate with Stripe/PayPal here
     // This is a mock implementation
 
@@ -107,7 +119,7 @@ export class CheckoutService {
 
     return {
       status: payment.status,
-      redirectUrl: null, // Set if 3D Secure required
+      redirectUrl: undefined, // Set if 3D Secure required
     };
   }
 }

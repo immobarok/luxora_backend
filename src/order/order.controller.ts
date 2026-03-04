@@ -23,7 +23,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 
 interface RequestWithUser extends Request {
-  user: { userId: string };
+  user: { id: string };
 }
 
 @Controller('orders')
@@ -37,21 +37,21 @@ export class OrderController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async createOrder(@Req() req: RequestWithUser, @Body() dto: CreateOrderDto) {
-    return this.orderService.createOrderFromCart(req.user.userId, dto);
+    return this.orderService.createOrderFromCart(req.user.id, dto);
   }
 
   // Checkout (create order + payment) (step 2)
   @Post('checkout')
   @UseGuards(JwtAuthGuard)
   async checkout(@Req() req: RequestWithUser, @Body() dto: CheckoutDto) {
-    return this.checkoutService.processCheckout(req.user.userId, dto);
+    return this.checkoutService.processCheckout(req.user.id, dto);
   }
 
   // Validate checkout
   @Get('checkout/validate')
   @UseGuards(JwtAuthGuard)
   async validateCheckout(@Req() req: RequestWithUser) {
-    return this.checkoutService.validateCheckout(req.user.userId);
+    return this.checkoutService.validateCheckout(req.user.id);
   }
 
   // Get my orders
@@ -61,14 +61,14 @@ export class OrderController {
     @Req() req: RequestWithUser,
     @Query() query: OrderQueryDto,
   ) {
-    return this.orderService.getUserOrders(req.user.userId, query);
+    return this.orderService.getUserOrders(req.user.id, query);
   }
 
   // Get order by ID
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getOrder(@Req() req: RequestWithUser, @Param('id') orderId: string) {
-    return this.orderService.getOrderById(orderId, req.user.userId);
+    return this.orderService.getOrderById(orderId, req.user.id);
   }
 
   // Cancel order
@@ -79,7 +79,7 @@ export class OrderController {
     @Param('id') orderId: string,
     @Body() dto: CancelOrderDto,
   ) {
-    return this.orderService.cancelOrder(orderId, req.user.userId, dto.reason);
+    return this.orderService.cancelOrder(orderId, req.user.id, dto.reason);
   }
 
   // Admin: Get all orders
@@ -110,7 +110,7 @@ export class OrderController {
     return this.orderService.updateOrderStatus(
       orderId,
       dto.status,
-      req.user.userId,
+      req.user.id,
       dto.comment,
     );
   }

@@ -20,7 +20,7 @@ import { Request } from 'express';
 import * as uuid from 'uuid';
 
 interface RequestWithUser extends Request {
-  user: { userId: string };
+  user: { id: string };
 }
 
 @Controller('cart')
@@ -30,7 +30,7 @@ export class CartController {
   @Get()
   @UseGuards(JwtAuthGuard)
   async getCart(@Req() req: RequestWithUser) {
-    return this.cartService.getCart(req.user.userId);
+    return this.cartService.getCart(req.user.id);
   }
 
   @Get('guest')
@@ -42,7 +42,7 @@ export class CartController {
   @Post('items')
   @UseGuards(JwtAuthGuard)
   async addToCart(@Req() req: RequestWithUser, @Body() dto: AddToCartDto) {
-    return this.cartService.addToCart(req.user.userId, dto);
+    return this.cartService.addToCart(req.user.id, dto);
   }
 
   @Post('guest/items')
@@ -61,7 +61,7 @@ export class CartController {
     @Param('itemId') itemId: string,
     @Body() dto: UpdateCartItemDto,
   ) {
-    return this.cartService.updateCartItem(req.user.userId, itemId, dto);
+    return this.cartService.updateCartItem(req.user.id, itemId, dto);
   }
 
   @Delete('items/:itemId')
@@ -70,13 +70,13 @@ export class CartController {
     @Req() req: RequestWithUser,
     @Param('itemId') itemId: string,
   ) {
-    return this.cartService.removeCartItem(req.user.userId, itemId);
+    return this.cartService.removeCartItem(req.user.id, itemId);
   }
 
   @Delete()
   @UseGuards(JwtAuthGuard)
   async clearCart(@Req() req: RequestWithUser) {
-    return this.cartService.clearCart(req.user.userId);
+    return this.cartService.clearCart(req.user.id);
   }
 
   @Post('merge')
@@ -86,6 +86,6 @@ export class CartController {
     @Headers('x-session-id') sessionId: string,
   ) {
     if (!sessionId) throw new BadRequestException('Session ID required');
-    return this.cartService.mergeGuestCartToUser(sessionId, req.user.userId);
+    return this.cartService.mergeGuestCartToUser(sessionId, req.user.id);
   }
 }
