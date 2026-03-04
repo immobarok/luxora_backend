@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import { AddToCartDto, UpdateCartItemDto } from './dto';
 import {
   CartEntity,
@@ -65,13 +65,13 @@ export class CartService {
 
   // Get or create guest cart
   async getOrCreateGuestCart(sessionId: string): Promise<CartWithItems> {
-    const guestUserId = this.getGuestUserId(sessionId);
     let cart = await this.prisma.cart.findUnique({
       where: { sessionId },
       include: cartWithItemsInclude,
     });
 
     if (!cart) {
+      const guestUserId = await this.ensureGuestUser(sessionId);
       cart = await this.prisma.cart.create({
         data: {
           userId: guestUserId,
@@ -84,6 +84,24 @@ export class CartService {
     }
 
     return cart;
+  }
+
+  private async ensureGuestUser(sessionId: string): Promise<string> {
+    const guestEmail = `guest-${sessionId}@guest.local`;
+    const guest = await this.prisma.user.upsert({
+      where: { email: guestEmail },
+      update: {},
+      create: {
+        email: guestEmail,
+        passwordHash: `guest-session-${sessionId}`,
+        firstName: 'Guest',
+        lastName: sessionId.slice(0, 8),
+        role: Role.CUSTOMER,
+      },
+      select: { id: true },
+    });
+
+    return guest.id;
   }
 
   // Add to cart (authenticated)
