@@ -16,6 +16,7 @@ import {
 import { CartService } from './cart.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { Request } from 'express';
 import * as uuid from 'uuid';
 
@@ -34,6 +35,7 @@ export class CartController {
   }
 
   @Get('guest')
+  @Public()
   async getGuestCart(@Headers('x-session-id') sessionId: string) {
     if (!sessionId) sessionId = uuid.v4();
     return this.cartService.getGuestCart(sessionId);
@@ -46,6 +48,7 @@ export class CartController {
   }
 
   @Post('guest/items')
+  @Public()
   async addToGuestCart(
     @Headers('x-session-id') sessionId: string,
     @Body() dto: AddToCartDto,
