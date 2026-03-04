@@ -34,6 +34,7 @@ export interface CartEntity {
   id: string;
   userId: string;
   currency: string;
+  couponCode?: string | null;
   items: CartItemEntity[];
   summary: CartSummaryEntity;
   settings?: CartSettingsInfo;

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Role } from '@prisma/client';
-import { AddToCartDto, UpdateCartItemDto } from './dto';
+import { AddToCartDto, ApplyCouponDto, UpdateCartItemDto } from './dto';
 import {
   CartEntity,
   CartItemEntity,
@@ -13,6 +13,7 @@ import {
   CartSettingsInfo,
 } from './entities/cart.entity';
 import { CartSettingsService } from './cart-settings.service';
+import { CouponService } from '../coupon/coupon.service';
 
 const cartWithItemsInclude = Prisma.validator<Prisma.CartInclude>()({
   items: {
@@ -40,6 +41,7 @@ export class CartService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settingsService: CartSettingsService,
+    private readonly couponService: CouponService,
   ) {}
 
   private getGuestUserId(sessionId: string): string {
@@ -243,6 +245,7 @@ export class CartService {
         id: '',
         userId: this.getGuestUserId(sessionId),
         currency: 'USD',
+        couponCode: null,
         items: [],
         summary: {
           itemCount: 0,
@@ -268,6 +271,89 @@ export class CartService {
     }
 
     return this.getCart(userId);
+  }
+
+  async applyCoupon(userId: string, dto: ApplyCouponDto): Promise<CartEntity> {
+    const cart = await this.getOrCreateCart(userId);
+    const { coupon, discountAmount } =
+      await this.couponService.calculateDiscountForCart(
+        cart.id,
+        dto.code,
+        userId,
+      );
+
+    await this.prisma.cart.update({
+      where: { id: cart.id },
+      data: {
+        couponCode: coupon.code,
+        couponDiscount: discountAmount,
+      },
+    });
+
+    await this.recalculateCart(cart.id);
+    return this.getCartResponse(cart.id);
+  }
+
+  async applyCouponToGuest(
+    sessionId: string,
+    dto: ApplyCouponDto,
+  ): Promise<CartEntity> {
+    const cart = await this.getOrCreateGuestCart(sessionId);
+    const { coupon, discountAmount } =
+      await this.couponService.calculateDiscountForCart(cart.id, dto.code);
+
+    await this.prisma.cart.update({
+      where: { id: cart.id },
+      data: {
+        couponCode: coupon.code,
+        couponDiscount: discountAmount,
+      },
+    });
+
+    await this.recalculateCart(cart.id);
+    return this.getCartResponse(cart.id);
+  }
+
+  async removeCoupon(userId: string): Promise<CartEntity> {
+    const cart = await this.prisma.cart.findUnique({ where: { userId } });
+    if (!cart) return this.getEmptyCartResponse(userId);
+
+    await this.prisma.cart.update({
+      where: { id: cart.id },
+      data: { couponCode: null, couponDiscount: 0 },
+    });
+
+    await this.recalculateCart(cart.id);
+    return this.getCartResponse(cart.id);
+  }
+
+  async removeCouponFromGuest(sessionId: string): Promise<CartEntity> {
+    const cart = await this.prisma.cart.findUnique({ where: { sessionId } });
+    if (!cart) {
+      return {
+        id: '',
+        userId: this.getGuestUserId(sessionId),
+        currency: 'USD',
+        couponCode: null,
+        items: [],
+        summary: {
+          itemCount: 0,
+          subtotal: 0,
+          discountTotal: 0,
+          taxTotal: 0,
+          shippingTotal: 0,
+          grandTotal: 0,
+        },
+      };
+    }
+
+    await this.prisma.cart.update({
+      where: { id: cart.id },
+      data: { couponCode: null, couponDiscount: 0 },
+    });
+
+    await this.recalculateCart(cart.id);
+    return this.getCartResponse(cart.id);
   }
 
   // Merge guest cart to user cart
@@ -452,6 +538,7 @@ export class CartService {
       id: cart.id,
       userId: cart.userId,
       currency: cart.currency,
+      couponCode: cart.couponCode,
       items,
       summary,
       settings: settingsInfo,
@@ -504,6 +591,7 @@ export class CartService {
       id: '',
       userId,
       currency: 'USD',
+      couponCode: null,
       items: [],
       summary: {
         itemCount: 0,

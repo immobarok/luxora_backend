@@ -14,7 +14,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { CartService } from './cart.service';
-import { AddToCartDto, UpdateCartItemDto } from './dto';
+import { AddToCartDto, ApplyCouponDto, UpdateCartItemDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { Request } from 'express';
@@ -80,6 +80,35 @@ export class CartController {
   @UseGuards(JwtAuthGuard)
   async clearCart(@Req() req: RequestWithUser) {
     return this.cartService.clearCart(req.user.id);
+  }
+
+  @Post('coupon')
+  @UseGuards(JwtAuthGuard)
+  async applyCoupon(@Req() req: RequestWithUser, @Body() dto: ApplyCouponDto) {
+    return this.cartService.applyCoupon(req.user.id, dto);
+  }
+
+  @Delete('coupon')
+  @UseGuards(JwtAuthGuard)
+  async removeCoupon(@Req() req: RequestWithUser) {
+    return this.cartService.removeCoupon(req.user.id);
+  }
+
+  @Post('guest/coupon')
+  @Public()
+  async applyGuestCoupon(
+    @Headers('x-session-id') sessionId: string,
+    @Body() dto: ApplyCouponDto,
+  ) {
+    if (!sessionId) throw new BadRequestException('Session ID required');
+    return this.cartService.applyCouponToGuest(sessionId, dto);
+  }
+
+  @Delete('guest/coupon')
+  @Public()
+  async removeGuestCoupon(@Headers('x-session-id') sessionId: string) {
+    if (!sessionId) throw new BadRequestException('Session ID required');
+    return this.cartService.removeCouponFromGuest(sessionId);
   }
 
   @Post('merge')

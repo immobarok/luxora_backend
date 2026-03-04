@@ -62,6 +62,10 @@ export class OrderService {
     userId: string,
     dto: CreateOrderDto,
   ): Promise<OrderEntity> {
+    if (dto.couponCode) {
+      await this.cartService.applyCoupon(userId, { code: dto.couponCode });
+    }
+
     // Get cart with items
     const cart = await this.cartService.getCart(userId);
 
@@ -113,7 +117,8 @@ export class OrderService {
           shippingTotal: cart.summary.shippingTotal,
           discountTotal: cart.summary.discountTotal,
           grandTotal: cart.summary.grandTotal,
-          couponCode: dto.couponCode || null,
+          couponCode: cart.couponCode || null,
+          couponDiscount: cart.summary.discountTotal || null,
           shippingAddressId: dto.shippingAddressId,
           billingAddressId,
           giftMessage: dto.giftMessage,
@@ -142,6 +147,13 @@ export class OrderService {
           billingAddress: true,
         },
       });
+
+      if (newOrder.couponCode) {
+        await tx.coupon.update({
+          where: { code: newOrder.couponCode },
+          data: { usageCount: { increment: 1 } },
+        });
+      }
 
       // Clear cart
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
