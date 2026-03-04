@@ -46,6 +46,23 @@ model CartItem {
   @@map("cart_items")
 }
 
+
+model CartSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique // "TAX_RATE", "FREE_SHIPPING_THRESHOLD", "SHIPPING_COST"
+  value     String   // Store as string, parse as needed
+  label     String   // Display name for admin
+  type      String   // "percentage", "amount", "number"
+  isActive  Boolean  @default(true)
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  updatedByUser User? @relation(fields: [updatedBy], references: [id])
+
+  @@map("cart_settings")
+}
+
 model Wishlist {
   id        String  @id @default(cuid())
   userId    String  @unique

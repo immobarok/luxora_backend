@@ -40,6 +40,7 @@ model User {
   adminActions   AdminAction[] @relation("AdminActions")
    media          Media[]       @relation("UserMedia")
   paymentMethods PaymentMethod[]
+  cartSettings   CartSettings[]
 
   @@index([email])
   @@index([role])
