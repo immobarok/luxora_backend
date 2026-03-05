@@ -1,6 +1,3 @@
-// ============================================================
-// UrbanNest – Generator & Datasource
-// ============================================================
 
 generator client {
   provider = "prisma-client-js"

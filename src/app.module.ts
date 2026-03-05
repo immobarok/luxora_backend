@@ -28,6 +28,7 @@ import { BrandModule } from './brand/brand.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { CouponModule } from './coupon/coupon.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { CouponModule } from './coupon/coupon.module';
     CartModule,
     OrderModule,
     CouponModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [
@@ -49,7 +51,7 @@ import { CouponModule } from './coupon/coupon.module';
     // --- Global Guards (JwtAuth first, then Roles) ---
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
-    // --- Global Interceptors (order matters – first registered = outermost) ---
+    // --- Global Interceptors (order matters â€“ first registered = outermost) ---
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: PerformanceInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },

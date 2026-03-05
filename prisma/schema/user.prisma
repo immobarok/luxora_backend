@@ -41,6 +41,9 @@ model User {
   media          Media[]       @relation("UserMedia")
   paymentMethods PaymentMethod[]
   cartSettings   CartSettings[]
+  customerChatRooms SupportChatRoom[]    @relation("CustomerChatRooms")
+  assignedChatRooms SupportChatRoom[]    @relation("SupportChatRooms")
+  chatMessages      SupportChatMessage[] @relation("UserChatMessages")
 
   @@index([email])
   @@index([role])

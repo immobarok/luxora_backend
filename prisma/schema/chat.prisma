@@ -1,0 +1,36 @@
+model SupportChatRoom {
+  id            String   @id @default(cuid())
+  customerId    String
+  supportId     String?
+  status        String   @default("OPEN")
+  lastMessageAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customer User               @relation("CustomerChatRooms", fields: [customerId], references: [id], onDelete: Cascade)
+  support  User?              @relation("SupportChatRooms", fields: [supportId], references: [id], onDelete: SetNull)
+  messages SupportChatMessage[]
+
+  @@index([customerId])
+  @@index([supportId])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@map("support_chat_rooms")
+}
+
+model SupportChatMessage {
+  id          String   @id @default(cuid())
+  roomId       String
+  senderId     String
+  content      String   @db.Text
+  messageType  String   @default("TEXT")
+  isRead       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  room   SupportChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User            @relation("UserChatMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
+  @@map("support_chat_messages")
+}
