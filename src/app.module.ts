@@ -29,6 +29,7 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { CouponModule } from './coupon/coupon.module';
 import { ChatModule } from './chat/chat.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ChatModule } from './chat/chat.module';
     OrderModule,
     CouponModule,
     ChatModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
