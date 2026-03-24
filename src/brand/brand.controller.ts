@@ -14,7 +14,7 @@ import {
 import { BrandService } from './brand.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Role, Roles } from 'src/common/decorators';
+import { Public, Role, Roles } from 'src/common/decorators';
 import { CreateBrandDto, UpdateBrandDto } from './dto';
 import { ResponseMessage } from 'src/common/interceptors';
 
@@ -31,6 +31,7 @@ export class BrandController {
   }
 
   @Get()
+  @Public()
   @ResponseMessage('Brands retrieved successfully')
   async findAll(
     @Query('search') search?: string,

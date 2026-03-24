@@ -26,6 +26,7 @@ import { MediaService } from '../media/media.service';
 import type { UploadedFile as UploadedFileType } from '../media/types/uploaded-file.type';
 import { ProductService } from './product.service';
 import { ResponseMessage } from 'src/common/interceptors';
+import { Public } from 'src/common/decorators';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -42,7 +43,7 @@ export class ProductController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @UseInterceptors(FilesInterceptor('files', 10))
   @ResponseMessage('Product created successfully')
   async create(
@@ -68,6 +69,7 @@ export class ProductController {
   }
 
   @Get()
+  @Public()
   @ResponseMessage('Products retrieved successfully')
   async findAll(@Query() query: ProductListQuery) {
     return this.productService.findAll(query);
@@ -94,7 +96,7 @@ export class ProductController {
   @Patch(':id')
   @ResponseMessage('Product updated successfully')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @UseInterceptors(FilesInterceptor('files', 10))
   async update(
     @Param('id') id: string,
@@ -121,7 +123,7 @@ export class ProductController {
 
   @Post(':id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Product published successfully')
   async publish(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
@@ -130,7 +132,7 @@ export class ProductController {
 
   @Post(':id/unpublish')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Product unpublished successfully')
   async unpublish(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
@@ -139,7 +141,7 @@ export class ProductController {
 
   @Post(':id/variants/:variantId/stock')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Stock updated successfully')
   async updateStock(
@@ -153,7 +155,7 @@ export class ProductController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ResponseMessage('Product removed successfully')
   async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
@@ -162,7 +164,7 @@ export class ProductController {
 
   @Delete(':id/permanent')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ResponseMessage('Product permanently removed successfully')
   async removePermanent(

@@ -16,6 +16,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { Public } from 'src/common/decorators';
 
 @Controller('categories')
 export class CategoryController {
@@ -29,6 +30,7 @@ export class CategoryController {
   }
 
   @Get()
+  @Public()
   async findAll() {
     return this.categoryService.findAll();
   }
