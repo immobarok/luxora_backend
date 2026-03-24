@@ -48,6 +48,7 @@ export class CategoryService {
         name: dto.name,
         slug: dto.slug,
         description: dto.description,
+        imageUrl: dto.imageUrl,
         parentId: dto.parentId,
         level,
         sortOrder: dto.sortOrder || 0,

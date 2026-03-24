@@ -3,6 +3,7 @@ export class CategoryEntity {
   slug!: string;
   name!: string;
   description!: string | null;
+  imageUrl!: string | null;
   parentId!: string | null;
   level!: number;
   sortOrder!: number;

@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsUUID,
+  IsUrl,
   Length,
   IsInt,
   Min,
@@ -25,6 +26,11 @@ export class CreateCategoryDto {
   @IsOptional()
   @Length(0, 500)
   description?: string;
+
+  @IsString()
+  @IsUrl()
+  @IsOptional()
+  imageUrl?: string;
 
   @IsUUID()
   @IsOptional()
