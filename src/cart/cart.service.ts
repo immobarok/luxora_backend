@@ -201,6 +201,57 @@ export class CartService {
     return this.getCartResponse(cartItem.cart.id);
   }
 
+  // Update guest cart item
+  async updateGuestCartItem(
+    sessionId: string,
+    itemId: string,
+    dto: UpdateCartItemDto,
+  ): Promise<CartEntity> {
+    const { quantity } = dto;
+
+    if (quantity < 0)
+      throw new BadRequestException('Quantity cannot be negative');
+    if (quantity === 0) return this.removeGuestCartItem(sessionId, itemId);
+
+    const cartItem = await this.prisma.cartItem.findFirst({
+      where: { id: itemId, cart: { sessionId } },
+      include: { variant: true, cart: true },
+    });
+
+    if (!cartItem) throw new NotFoundException('Cart item not found');
+
+    await this.validateVariant(cartItem.variantId, quantity);
+
+    await this.prisma.cartItem.update({
+      where: { id: itemId },
+      data: {
+        quantity,
+        totalPrice: new Prisma.Decimal(cartItem.unitPrice).mul(quantity),
+      },
+    });
+
+    await this.recalculateCart(cartItem.cart.id);
+    return this.getCartResponse(cartItem.cart.id);
+  }
+
+  // Remove guest cart item
+  async removeGuestCartItem(
+    sessionId: string,
+    itemId: string,
+  ): Promise<CartEntity> {
+    const cartItem = await this.prisma.cartItem.findFirst({
+      where: { id: itemId, cart: { sessionId } },
+      include: { cart: true },
+    });
+
+    if (!cartItem) throw new NotFoundException('Cart item not found');
+
+    await this.prisma.cartItem.delete({ where: { id: itemId } });
+    await this.recalculateCart(cartItem.cart.id);
+
+    return this.getCartResponse(cartItem.cart.id);
+  }
+
   // Get cart
   async getCart(userId: string): Promise<CartEntity> {
     const cart = await this.prisma.cart.findUnique({

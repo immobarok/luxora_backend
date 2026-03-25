@@ -76,6 +76,27 @@ export class CartController {
     return this.cartService.removeCartItem(req.user.id, itemId);
   }
 
+  @Patch('guest/items/:itemId')
+  @Public()
+  async updateGuestCartItem(
+    @Headers('x-session-id') sessionId: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateCartItemDto,
+  ) {
+    if (!sessionId) throw new BadRequestException('Session ID required');
+    return this.cartService.updateGuestCartItem(sessionId, itemId, dto);
+  }
+
+  @Delete('guest/items/:itemId')
+  @Public()
+  async removeGuestCartItem(
+    @Headers('x-session-id') sessionId: string,
+    @Param('itemId') itemId: string,
+  ) {
+    if (!sessionId) throw new BadRequestException('Session ID required');
+    return this.cartService.removeGuestCartItem(sessionId, itemId);
+  }
+
   @Delete()
   @UseGuards(JwtAuthGuard)
   async clearCart(@Req() req: RequestWithUser) {

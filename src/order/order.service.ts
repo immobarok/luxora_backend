@@ -82,14 +82,14 @@ export class OrderService {
       }
     }
 
-    // Use shipping address as billing if not provided
-    const billingAddressId = dto.billingAddressId || dto.shippingAddressId;
-
     // Generate order number
     const orderNumber = await this.generateOrderNumber();
 
     // Create order in transaction
     const order = await this.prisma.$transaction(async (tx) => {
+      const { shippingAddressId, billingAddressId } =
+        await this.resolveAddressIds(userId, dto, tx);
+
       // Deduct inventory
       for (const item of cart.items) {
         await tx.productVariant.update({
@@ -119,7 +119,7 @@ export class OrderService {
           grandTotal: cart.summary.grandTotal,
           couponCode: cart.couponCode || null,
           couponDiscount: cart.summary.discountTotal || null,
-          shippingAddressId: dto.shippingAddressId,
+          shippingAddressId,
           billingAddressId,
           giftMessage: dto.giftMessage,
           items: {
@@ -502,6 +502,66 @@ export class OrderService {
     });
 
     return `${prefix}${String(count + 1).padStart(6, '0')}`;
+  }
+
+  private async resolveAddressIds(
+    userId: string,
+    dto: CreateOrderDto,
+    tx: Prisma.TransactionClient,
+  ): Promise<{ shippingAddressId: string; billingAddressId: string }> {
+    let shippingAddressId = dto.shippingAddressId;
+
+    if (!shippingAddressId && dto.shippingAddress) {
+      const created = await tx.address.create({
+        data: {
+          userId,
+          type: 'SHIPPING',
+          isDefault: false,
+          firstName: dto.shippingAddress.firstName,
+          lastName: dto.shippingAddress.lastName,
+          phone: dto.shippingAddress.phone,
+          line1: dto.shippingAddress.line1,
+          line2: dto.shippingAddress.line2,
+          city: dto.shippingAddress.city,
+          state: dto.shippingAddress.state,
+          postalCode: dto.shippingAddress.postalCode,
+          country: dto.shippingAddress.country,
+        },
+      });
+      shippingAddressId = created.id;
+    }
+
+    if (!shippingAddressId) {
+      throw new BadRequestException('Shipping address is required');
+    }
+
+    let billingAddressId = dto.billingAddressId;
+
+    if (!billingAddressId && dto.billingAddress) {
+      const created = await tx.address.create({
+        data: {
+          userId,
+          type: 'BILLING',
+          isDefault: false,
+          firstName: dto.billingAddress.firstName,
+          lastName: dto.billingAddress.lastName,
+          phone: dto.billingAddress.phone,
+          line1: dto.billingAddress.line1,
+          line2: dto.billingAddress.line2,
+          city: dto.billingAddress.city,
+          state: dto.billingAddress.state,
+          postalCode: dto.billingAddress.postalCode,
+          country: dto.billingAddress.country,
+        },
+      });
+      billingAddressId = created.id;
+    }
+
+    if (!billingAddressId) {
+      billingAddressId = shippingAddressId;
+    }
+
+    return { shippingAddressId, billingAddressId };
   }
 
   // Helper: Get valid status transitions

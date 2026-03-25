@@ -66,6 +66,8 @@ export class CheckoutService {
     const order = await this.orderService.createOrderFromCart(userId, {
       shippingAddressId: dto.shippingAddressId,
       billingAddressId: dto.billingAddressId,
+      shippingAddress: dto.shippingAddress,
+      billingAddress: dto.billingAddress,
       couponCode: dto.couponCode,
     });
 

@@ -82,6 +82,7 @@ export class ProductController {
   }
 
   @Get('slug/:slug')
+  @Public()
   @ResponseMessage('Product retrieved successfully')
   async findBySlug(@Param('slug') slug: string) {
     return this.productService.findBySlug(slug);

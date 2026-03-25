@@ -16,7 +16,7 @@ import {
   StockStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductDto, CreateVariantDto } from './dto/create-product.dto';
 import { ProductListQueryDto } from './dto/product-list-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
@@ -60,8 +60,9 @@ export class ProductService {
     // Auto-generate variant SKUs if missing
     if (dto.variants) {
       dto.variants.forEach((variant) => {
+        const normalizedOptions = this.normalizeVariantOptions(variant);
         if (!variant.sku) {
-          variant.sku = this.generateVariantSku(sku, variant.options);
+          variant.sku = this.generateVariantSku(sku, normalizedOptions);
         }
       });
       // Re-validate now that we have SKUs
@@ -273,26 +274,33 @@ export class ProductService {
     if (dto.variants) {
       // Auto-generate variant SKUs if missing
       dto.variants.forEach((variant) => {
+        const normalizedOptions = this.normalizeVariantOptions(variant);
         if (!variant.sku) {
-          variant.sku = this.generateVariantSku(existing.sku, variant.options);
+          variant.sku = this.generateVariantSku(
+            existing.sku,
+            normalizedOptions,
+          );
         }
       });
 
       await this.validateVariantSkus(dto.variants, id);
       updateData.variants = {
         deleteMany: {},
-        create: dto.variants.map((variant) => ({
-          sku: variant.sku!, // Safe assertion after auto-generation
-          options: variant.options as unknown as Prisma.InputJsonValue,
-          price: variant.price,
-          salePrice: variant.salePrice,
-          quantity: variant.quantity,
-          stockStatus: this.calculateStockStatus(variant.quantity),
-          barcode: variant.barcode,
-          upc: variant.upc,
-          mediaUrls: variant.mediaUrls ?? [],
-          weight: variant.weight,
-        })),
+        create: dto.variants.map((variant) => {
+          const normalizedOptions = this.normalizeVariantOptions(variant);
+          return {
+            sku: variant.sku!, // Safe assertion after auto-generation
+            options: normalizedOptions as unknown as Prisma.InputJsonValue,
+            price: variant.price,
+            salePrice: variant.salePrice,
+            quantity: variant.quantity,
+            stockStatus: this.calculateStockStatus(variant.quantity),
+            barcode: variant.barcode,
+            upc: variant.upc,
+            mediaUrls: variant.mediaUrls ?? [],
+            weight: variant.weight,
+          };
+        }),
       };
     }
 
@@ -635,21 +643,45 @@ export class ProductService {
         : undefined,
       variants: dto.variants
         ? {
-            create: dto.variants.map((variant) => ({
-              sku: variant.sku!,
-              options: variant.options as unknown as Prisma.InputJsonValue,
-              price: variant.price,
-              salePrice: variant.salePrice,
-              quantity: variant.quantity,
-              stockStatus: this.calculateStockStatus(variant.quantity),
-              barcode: variant.barcode,
-              upc: variant.upc,
-              mediaUrls: variant.mediaUrls ?? [],
-              weight: variant.weight,
-            })),
+            create: dto.variants.map((variant) => {
+              const normalizedOptions = this.normalizeVariantOptions(variant);
+              return {
+                sku: variant.sku!,
+                options: normalizedOptions as unknown as Prisma.InputJsonValue,
+                price: variant.price,
+                salePrice: variant.salePrice,
+                quantity: variant.quantity,
+                stockStatus: this.calculateStockStatus(variant.quantity),
+                barcode: variant.barcode,
+                upc: variant.upc,
+                mediaUrls: variant.mediaUrls ?? [],
+                weight: variant.weight,
+              };
+            }),
           }
         : undefined,
     };
+  }
+
+  private normalizeVariantOptions(
+    variant: Pick<CreateVariantDto, 'options' | 'size'>,
+  ): Array<{ name: string; value: string }> {
+    const options = [...(variant.options ?? [])];
+
+    if (
+      variant.size &&
+      !options.some((opt) => opt.name.toLowerCase() === 'size')
+    ) {
+      options.push({ name: 'Size', value: variant.size });
+    }
+
+    if (options.length === 0) {
+      throw new BadRequestException(
+        'Each variant must include at least one option or a size',
+      );
+    }
+
+    return options;
   }
 
   private buildWhereClause(
@@ -735,8 +767,107 @@ export class ProductService {
     await Promise.all(keys.map((key) => this.cacheManager.del(key)));
   }
 
-  private serializeProduct<T>(value: T): T {
-    return this.deepConvert(value) as T;
+  private serializeProduct(
+    value: Prisma.ProductGetPayload<{ include: typeof PRODUCT_INCLUDE }>,
+  ) {
+    const product = this.deepConvert(value) as Record<string, unknown>;
+
+    const categories = Array.isArray(product.categories)
+      ? product.categories.map((item) => {
+          const row = item as Record<string, unknown>;
+          const category = (row.category ?? {}) as Record<string, unknown>;
+          return {
+            id: category.id,
+            slug: category.slug,
+            name: category.name,
+            imageUrl: category.imageUrl,
+          };
+        })
+      : [];
+
+    const media = Array.isArray(product.media)
+      ? product.media.map((item) => {
+          const row = item as Record<string, unknown>;
+          return {
+            id: row.id,
+            url: row.url,
+            thumbnailUrl: row.thumbnailUrl,
+            alt: row.alt,
+          };
+        })
+      : [];
+
+    const attributes = Array.isArray(product.attributes)
+      ? product.attributes.map((item) => {
+          const row = item as Record<string, unknown>;
+          return {
+            id: row.id,
+            name: row.name,
+            value: row.value,
+            displayType: row.displayType,
+          };
+        })
+      : [];
+
+    const variants = Array.isArray(product.variants)
+      ? product.variants.map((item) => {
+          const row = item as Record<string, unknown>;
+          const options = Array.isArray(row.options)
+            ? (row.options as Array<{ name?: string; value?: string }>)
+            : [];
+          const sizeOption = options.find(
+            (opt) => (opt.name ?? '').toLowerCase() === 'size',
+          );
+          return {
+            id: row.id,
+            sku: row.sku,
+            size: sizeOption?.value ?? null,
+            options,
+            price: row.price,
+            salePrice: row.salePrice,
+            stockStatus: row.stockStatus,
+            quantity: row.quantity,
+            weight: row.weight,
+            isActive: row.isActive,
+          };
+        })
+      : [];
+
+    const brand = product.brand as Record<string, unknown> | null;
+
+    return {
+      id: product.id,
+      slug: product.slug,
+      sku: product.sku,
+      name: product.name,
+      description: product.description,
+      shortDescription: product.shortDescription,
+      gender: product.gender,
+      status: product.status,
+      basePrice: product.basePrice,
+      compareAtPrice: product.compareAtPrice,
+      isFeatured: product.isFeatured,
+      isNewArrival: product.isNewArrival,
+      isSale: product.isSale,
+      avgRating: product.avgRating,
+      reviewCount: product.reviewCount,
+      totalSales: product.totalSales,
+      publishedAt: product.publishedAt,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+      brand: brand
+        ? {
+            id: brand.id,
+            slug: brand.slug,
+            name: brand.name,
+            logoUrl: brand.logoUrl,
+          }
+        : null,
+      categories,
+      media,
+      attributes,
+      variants,
+    };
   }
 
   private deepConvert(value: unknown): unknown {

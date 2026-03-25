@@ -1,13 +1,25 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsUUID, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { AddressInputDto } from './address.dto';
 
 export class CreateOrderDto {
   @IsUUID()
-  @IsNotEmpty()
-  shippingAddressId!: string;
+  @IsOptional()
+  shippingAddressId?: string;
+
+  @ValidateNested()
+  @Type(() => AddressInputDto)
+  @IsOptional()
+  shippingAddress?: AddressInputDto;
 
   @IsUUID()
   @IsOptional()
   billingAddressId?: string;
+
+  @ValidateNested()
+  @Type(() => AddressInputDto)
+  @IsOptional()
+  billingAddress?: AddressInputDto;
 
   @IsString()
   @IsOptional()

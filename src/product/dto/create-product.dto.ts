@@ -8,7 +8,6 @@ import {
   ValidateNested,
   IsBoolean,
   Min,
-  ArrayMinSize,
   Length,
   // Matches,
   IsInt,
@@ -38,11 +37,16 @@ export class CreateVariantDto {
   @Length(3, 50)
   sku?: string;
 
+  @IsString()
+  @IsOptional()
+  @Length(1, 50)
+  size?: string;
+
   @IsArray()
-  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => VariantOptionDto)
-  options!: VariantOptionDto[];
+  @IsOptional()
+  options?: VariantOptionDto[];
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
