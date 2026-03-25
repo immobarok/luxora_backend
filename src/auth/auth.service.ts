@@ -118,7 +118,9 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload);
-    const refreshExpiresIn = '7d' as StringValue;
+    const refreshExpiresIn =
+      (process.env.JWT_REFRESH_EXPIRES_IN as StringValue) ??
+      ('15d' as StringValue);
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: refreshExpiresIn,
     });

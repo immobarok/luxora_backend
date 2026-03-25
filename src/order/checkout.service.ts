@@ -88,6 +88,14 @@ export class CheckoutService {
       );
     }
 
+    // Clear cart only for COD or when payment is successfully captured.
+    if (
+      dto.paymentMethod === PaymentMethodType.COD ||
+      payment.status === 'CAPTURED'
+    ) {
+      await this.cartService.clearCart(userId);
+    }
+
     return {
       order,
       payment: {
@@ -106,16 +114,17 @@ export class CheckoutService {
     // Integrate with Stripe/PayPal here
     // This is a mock implementation
 
+    const isCod = method === PaymentMethodType.COD;
     const payment = await this.prisma.payment.create({
       data: {
         orderId,
         amount,
         currency: 'USD',
-        status: 'CAPTURED',
+        status: isCod ? 'CAPTURED' : 'PENDING',
         method,
-        provider: 'stripe',
-        providerTxnId: `txn_${Date.now()}`,
-        processedAt: new Date(),
+        provider: isCod ? 'cod' : 'stripe',
+        providerTxnId: isCod ? undefined : `txn_${Date.now()}`,
+        processedAt: isCod ? new Date() : undefined,
       },
     });
 

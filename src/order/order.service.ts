@@ -155,21 +155,6 @@ export class OrderService {
         });
       }
 
-      // Clear cart
-      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-      await tx.cart.update({
-        where: { id: cart.id },
-        data: {
-          subtotal: 0,
-          taxTotal: 0,
-          shippingTotal: 0,
-          discountTotal: 0,
-          grandTotal: 0,
-          couponCode: null,
-          couponDiscount: 0,
-        },
-      });
-
       return newOrder;
     });
 

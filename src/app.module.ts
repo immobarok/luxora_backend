@@ -31,6 +31,7 @@ import { CouponModule } from './coupon/coupon.module';
 import { ChatModule } from './chat/chat.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AddressModule } from './address/address.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AddressModule } from './address/address.module';
     ChatModule,
     DashboardModule,
     AddressModule,
+    StripeModule,
   ],
   controllers: [AppController],
   providers: [
