@@ -6,6 +6,122 @@ import { PrismaService } from '../prisma/prisma.service';
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getOrderCards(days = 30) {
+    const safeDays = Number.isFinite(days) && days > 0 ? days : 30;
+
+    const now = new Date();
+    const currentStart = new Date(now);
+    currentStart.setDate(currentStart.getDate() - safeDays);
+
+    const previousStart = new Date(currentStart);
+    previousStart.setDate(previousStart.getDate() - safeDays);
+
+    const baseWhere = {
+      placedAt: { gte: currentStart, lte: now },
+    };
+
+    const previousWhere = {
+      placedAt: { gte: previousStart, lt: currentStart },
+    };
+
+    const [
+      totalOrders,
+      pendingOrders,
+      completedOrders,
+      cancelledOrders,
+      prevTotalOrders,
+      prevPendingOrders,
+      prevCompletedOrders,
+      prevCancelledOrders,
+    ] = await Promise.all([
+      this.prisma.order.count(),
+      this.prisma.order.count({
+        where: { status: OrderStatus.PENDING_PAYMENT },
+      }),
+      this.prisma.order.count({
+        where: {
+          status: {
+            notIn: [OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED],
+          },
+        },
+      }),
+      this.prisma.order.count({ where: { status: OrderStatus.CANCELLED } }),
+      this.prisma.order.count({ where: previousWhere }),
+      this.prisma.order.count({
+        where: {
+          ...previousWhere,
+          status: OrderStatus.PENDING_PAYMENT,
+        },
+      }),
+      this.prisma.order.count({
+        where: {
+          ...previousWhere,
+          status: {
+            notIn: [OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED],
+          },
+        },
+      }),
+      this.prisma.order.count({
+        where: {
+          ...previousWhere,
+          status: OrderStatus.CANCELLED,
+        },
+      }),
+    ]);
+
+    const currentTotalOrders = await this.prisma.order.count({
+      where: baseWhere,
+    });
+    const currentPendingOrders = await this.prisma.order.count({
+      where: { ...baseWhere, status: OrderStatus.PENDING_PAYMENT },
+    });
+    const currentCompletedOrders = await this.prisma.order.count({
+      where: {
+        ...baseWhere,
+        status: {
+          notIn: [OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED],
+        },
+      },
+    });
+    const currentCancelledOrders = await this.prisma.order.count({
+      where: { ...baseWhere, status: OrderStatus.CANCELLED },
+    });
+
+    return {
+      periodDays: safeDays,
+      cards: {
+        totalOrders: {
+          value: totalOrders,
+          growthPercent: this.calculateGrowthPercent(
+            currentTotalOrders,
+            prevTotalOrders,
+          ),
+        },
+        pendingOrders: {
+          value: pendingOrders,
+          growthPercent: this.calculateGrowthPercent(
+            currentPendingOrders,
+            prevPendingOrders,
+          ),
+        },
+        completedOrders: {
+          value: completedOrders,
+          growthPercent: this.calculateGrowthPercent(
+            currentCompletedOrders,
+            prevCompletedOrders,
+          ),
+        },
+        cancelledOrders: {
+          value: cancelledOrders,
+          growthPercent: this.calculateGrowthPercent(
+            currentCancelledOrders,
+            prevCancelledOrders,
+          ),
+        },
+      },
+    };
+  }
+
   async getOverview(days = 30) {
     const safeDays = Number.isFinite(days) && days > 0 ? days : 30;
 

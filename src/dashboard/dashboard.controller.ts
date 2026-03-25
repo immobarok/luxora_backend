@@ -12,6 +12,14 @@ import { DashboardService } from './dashboard.service';
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
+  @Get('orders-cards')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  async getOrderCards(
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
+  ) {
+    return this.dashboardService.getOrderCards(days);
+  }
+
   @Get('overview')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   async getOverview(
