@@ -185,6 +185,30 @@ export class OrderService {
     return this.mapOrderToEntity(order);
   }
 
+  // Get order by ID (Admin)
+  async getOrderByIdForAdmin(orderId: string): Promise<OrderEntity> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+        shippingAddress: true,
+        billingAddress: true,
+        payments: true,
+        shipments: true,
+        statusHistory: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return this.mapOrderToEntity(order);
+  }
+
   // Get order by number (for guests)
   async getOrderByNumber(
     orderNumber: string,

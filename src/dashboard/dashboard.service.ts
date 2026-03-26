@@ -6,6 +6,204 @@ import { PrismaService } from '../prisma/prisma.service';
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getTopSellingProducts(limit = 10, year?: number, categoryId?: string) {
+    const safeLimit =
+      Number.isFinite(limit) && limit > 0 ? Math.min(limit, 50) : 10;
+    const data = await this.getProductSales(year, categoryId);
+
+    return {
+      year: data.year,
+      categoryId: data.categoryId,
+      total: data.topSellingProducts.length,
+      limit: safeLimit,
+      data: data.topSellingProducts.slice(0, safeLimit),
+    };
+  }
+
+  async getProductSales(year?: number, categoryId?: string) {
+    const targetYear =
+      year && Number.isInteger(year) && year > 2000
+        ? year
+        : new Date().getFullYear();
+
+    const currentStart = new Date(targetYear, 0, 1);
+    const currentEnd = new Date(targetYear + 1, 0, 1);
+    const previousStart = new Date(targetYear - 1, 0, 1);
+    const previousEnd = new Date(targetYear, 0, 1);
+
+    const currentItems = await this.fetchOrderItemsForPeriod(
+      currentStart,
+      currentEnd,
+      categoryId,
+    );
+    const previousItems = await this.fetchOrderItemsForPeriod(
+      previousStart,
+      previousEnd,
+      categoryId,
+    );
+
+    const monthLabels = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const monthlySales = new Array<number>(12).fill(0);
+    const monthlyEarning = new Array<number>(12).fill(0);
+
+    const topMap = new Map<
+      string,
+      {
+        variantId: string;
+        productId: string;
+        productName: string;
+        imageUrl: string | null;
+        price: number;
+        totalSold: number;
+        totalEarning: number;
+      }
+    >();
+
+    let totalSales = 0;
+    let totalEarning = 0;
+
+    for (const item of currentItems) {
+      const monthIndex = item.order.placedAt.getMonth();
+      const soldQty = item.quantity;
+      const earning = this.decimalToNumber(item.totalPrice);
+
+      totalSales += soldQty;
+      totalEarning += earning;
+      monthlySales[monthIndex] += soldQty;
+      monthlyEarning[monthIndex] += earning;
+
+      const key = item.variantId;
+      const existing = topMap.get(key);
+      const imageUrl =
+        item.variant.product.media[0]?.url ?? item.variant.mediaUrls[0] ?? null;
+      const price = this.decimalToNumber(item.variant.price);
+
+      if (!existing) {
+        topMap.set(key, {
+          variantId: item.variantId,
+          productId: item.variant.product.id,
+          productName: item.variant.product.name,
+          imageUrl,
+          price,
+          totalSold: soldQty,
+          totalEarning: earning,
+        });
+      } else {
+        existing.totalSold += soldQty;
+        existing.totalEarning += earning;
+      }
+    }
+
+    const previousTotals = previousItems.reduce(
+      (acc, item) => {
+        acc.totalSales += item.quantity;
+        acc.totalEarning += this.decimalToNumber(item.totalPrice);
+        return acc;
+      },
+      { totalSales: 0, totalEarning: 0 },
+    );
+
+    const topSellingProducts = Array.from(topMap.values())
+      .sort((a, b) => b.totalSold - a.totalSold)
+      .slice(0, 5)
+      .map((item, idx) => ({
+        rank: idx + 1,
+        ...item,
+      }));
+
+    return {
+      year: targetYear,
+      categoryId: categoryId ?? null,
+      summary: {
+        totalSales,
+        totalEarning: Number(totalEarning.toFixed(2)),
+        totalSalesGrowthPercent: this.calculateGrowthPercent(
+          totalSales,
+          previousTotals.totalSales,
+        ),
+        totalEarningGrowthPercent: this.calculateGrowthPercent(
+          totalEarning,
+          previousTotals.totalEarning,
+        ),
+      },
+      chart: {
+        labels: monthLabels,
+        totalSales: monthlySales,
+        totalEarning: monthlyEarning.map((v) => Number(v.toFixed(2))),
+      },
+      topSellingProducts,
+    };
+  }
+
+  private async fetchOrderItemsForPeriod(
+    start: Date,
+    end: Date,
+    categoryId?: string,
+  ) {
+    return this.prisma.orderItem.findMany({
+      where: {
+        order: {
+          placedAt: { gte: start, lt: end },
+          status: {
+            notIn: [OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED],
+          },
+        },
+        ...(categoryId
+          ? {
+              variant: {
+                product: {
+                  categories: {
+                    some: { categoryId },
+                  },
+                },
+              },
+            }
+          : {}),
+      },
+      select: {
+        variantId: true,
+        quantity: true,
+        totalPrice: true,
+        order: {
+          select: {
+            placedAt: true,
+          },
+        },
+        variant: {
+          select: {
+            price: true,
+            mediaUrls: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                media: {
+                  where: { isDeleted: false },
+                  take: 1,
+                  orderBy: { createdAt: 'asc' },
+                  select: { url: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async getOrderCards(days = 30) {
     const safeDays = Number.isFinite(days) && days > 0 ? days : 30;
 

@@ -90,6 +90,14 @@ export class OrderController {
     return this.orderService.getAllOrders(query);
   }
 
+  // Admin: Get single order by ID
+  @Get('admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  async getAdminOrder(@Param('id') orderId: string) {
+    return this.orderService.getOrderByIdForAdmin(orderId);
+  }
+
   // Admin: Get order statistics
   @Get('admin/stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
