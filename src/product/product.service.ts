@@ -203,6 +203,20 @@ export class ProductService {
     const updateData: Prisma.ProductUpdateInput = {};
     const mediaIdsToAdd: string[] = [];
     const mediaIdsToRemove: string[] = [];
+    let variantsToUpsert:
+      | Array<{
+          sku: string;
+          options: Prisma.InputJsonValue;
+          price: number;
+          salePrice?: number;
+          quantity: number;
+          stockStatus: StockStatus;
+          barcode?: string;
+          upc?: string;
+          mediaUrls: string[];
+          weight?: number;
+        }>
+      | undefined;
 
     if (dto.name && dto.name !== existing.name) {
       updateData.name = dto.name;
@@ -250,58 +264,69 @@ export class ProductService {
         : { disconnect: true };
     }
 
-    if (dto.categoryIds) {
-      await this.validateCategories(dto.categoryIds);
+    if (dto.categoryIds !== undefined) {
+      if (dto.categoryIds.length > 0) {
+        await this.validateCategories(dto.categoryIds);
+      }
+
       updateData.categories = {
         deleteMany: {},
-        create: dto.categoryIds.map((categoryId) => ({
-          category: { connect: { id: categoryId } },
-        })),
+        ...(dto.categoryIds.length > 0
+          ? {
+              create: dto.categoryIds.map((categoryId) => ({
+                category: { connect: { id: categoryId } },
+              })),
+            }
+          : {}),
       };
     }
 
-    if (dto.attributes) {
+    if (dto.attributes !== undefined) {
       updateData.attributes = {
         deleteMany: {},
-        create: dto.attributes.map((attribute) => ({
-          name: attribute.name,
-          value: attribute.value,
-          displayType: attribute.displayType ?? 'text',
-        })),
+        ...(dto.attributes.length > 0
+          ? {
+              create: dto.attributes.map((attribute) => ({
+                name: attribute.name,
+                value: attribute.value,
+                displayType: attribute.displayType ?? 'text',
+              })),
+            }
+          : {}),
       };
     }
 
-    if (dto.variants) {
-      // Auto-generate variant SKUs if missing
-      dto.variants.forEach((variant) => {
-        const normalizedOptions = this.normalizeVariantOptions(variant);
-        if (!variant.sku) {
-          variant.sku = this.generateVariantSku(
-            existing.sku,
-            normalizedOptions,
-          );
-        }
-      });
-
-      await this.validateVariantSkus(dto.variants, id);
-      updateData.variants = {
-        deleteMany: {},
-        create: dto.variants.map((variant) => {
+    if (dto.variants !== undefined) {
+      if (dto.variants.length > 0) {
+        // Auto-generate variant SKUs if missing
+        dto.variants.forEach((variant) => {
           const normalizedOptions = this.normalizeVariantOptions(variant);
-          return {
-            sku: variant.sku!, // Safe assertion after auto-generation
-            options: normalizedOptions as unknown as Prisma.InputJsonValue,
-            price: variant.price,
-            salePrice: variant.salePrice,
-            quantity: variant.quantity,
-            stockStatus: this.calculateStockStatus(variant.quantity),
-            barcode: variant.barcode,
-            upc: variant.upc,
-            mediaUrls: variant.mediaUrls ?? [],
-            weight: variant.weight,
-          };
-        }),
-      };
+          if (!variant.sku) {
+            variant.sku = this.generateVariantSku(
+              existing.sku,
+              normalizedOptions,
+            );
+          }
+        });
+
+        await this.validateVariantSkus(dto.variants, id);
+      }
+
+      variantsToUpsert = dto.variants.map((variant) => {
+        const normalizedOptions = this.normalizeVariantOptions(variant);
+        return {
+          sku: variant.sku!, // Safe assertion after auto-generation
+          options: normalizedOptions as unknown as Prisma.InputJsonValue,
+          price: variant.price,
+          salePrice: variant.salePrice,
+          quantity: variant.quantity,
+          stockStatus: this.calculateStockStatus(variant.quantity),
+          barcode: variant.barcode,
+          upc: variant.upc,
+          mediaUrls: variant.mediaUrls ?? [],
+          weight: variant.weight,
+        };
+      });
     }
 
     if (dto.mediaIds) {
@@ -324,6 +349,70 @@ export class ProductService {
         data: updateData,
         include: PRODUCT_INCLUDE,
       });
+
+      if (variantsToUpsert !== undefined) {
+        const existingVariants = await tx.productVariant.findMany({
+          where: { productId: id },
+          select: { id: true, sku: true },
+        });
+
+        const existingBySku = new Map(
+          existingVariants.map((variant) => [variant.sku, variant.id]),
+        );
+        const incomingSkus = new Set(variantsToUpsert.map((item) => item.sku));
+        const skusToDeactivate = existingVariants
+          .map((variant) => variant.sku)
+          .filter((sku) => !incomingSkus.has(sku));
+
+        if (skusToDeactivate.length > 0) {
+          await tx.productVariant.updateMany({
+            where: {
+              productId: id,
+              sku: { in: skusToDeactivate },
+            },
+            data: { isActive: false },
+          });
+        }
+
+        for (const variant of variantsToUpsert) {
+          const existingVariantId = existingBySku.get(variant.sku);
+
+          if (existingVariantId) {
+            await tx.productVariant.update({
+              where: { id: existingVariantId },
+              data: {
+                options: variant.options,
+                price: variant.price,
+                salePrice: variant.salePrice,
+                quantity: variant.quantity,
+                stockStatus: variant.stockStatus,
+                barcode: variant.barcode,
+                upc: variant.upc,
+                mediaUrls: variant.mediaUrls,
+                weight: variant.weight,
+                isActive: true,
+              },
+            });
+          } else {
+            await tx.productVariant.create({
+              data: {
+                productId: id,
+                sku: variant.sku,
+                options: variant.options,
+                price: variant.price,
+                salePrice: variant.salePrice,
+                quantity: variant.quantity,
+                stockStatus: variant.stockStatus,
+                barcode: variant.barcode,
+                upc: variant.upc,
+                mediaUrls: variant.mediaUrls,
+                weight: variant.weight,
+                isActive: true,
+              },
+            });
+          }
+        }
+      }
 
       if (mediaIdsToAdd.length > 0) {
         await tx.media.updateMany({

@@ -76,6 +76,7 @@ export class ProductController {
   }
 
   @Get('featured')
+  @Public()
   @ResponseMessage('Featured products retrieved successfully')
   async findFeatured() {
     return this.productService.findFeatured();
