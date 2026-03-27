@@ -917,6 +917,34 @@ export class DashboardService {
     };
   }
 
+  async deleteCustomer(customerId: string): Promise<void> {
+    const customer = await this.prisma.user.findFirst({
+      where: {
+        id: customerId,
+        role: Role.CUSTOMER,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    if (customer.status === AccountStatus.DELETED) {
+      return;
+    }
+
+    await this.prisma.user.update({
+      where: { id: customerId },
+      data: {
+        status: AccountStatus.DELETED,
+      },
+    });
+  }
+
   private buildCustomerOrderBy(
     sortBy: CustomerSortBy,
     sortOrder: SortOrder,
@@ -962,6 +990,8 @@ export class DashboardService {
 
     if (query.status) {
       where.status = query.status;
+    } else {
+      where.status = { not: AccountStatus.DELETED };
     }
 
     const trimmedSearch = query.search?.trim();

@@ -37,7 +37,8 @@ export const SkipTransform = () => SetMetadata(SKIP_TRANSFORM_KEY, true);
  * create() { ... }
  * ```
  */
-export const ResponseMessage = (message: string) => SetMetadata(RESPONSE_MESSAGE_KEY, message);
+export const ResponseMessage = (message: string) =>
+  SetMetadata(RESPONSE_MESSAGE_KEY, message);
 
 /**
  * Standard API response envelope.
@@ -72,7 +73,7 @@ export class TransformInterceptor<T> implements NestInterceptor<
   T,
   ApiResponse<T>
 > {
-  constructor(private readonly reflector: Reflector) { }
+  constructor(private readonly reflector: Reflector) {}
 
   intercept(
     context: ExecutionContext,
@@ -111,7 +112,7 @@ export class TransformInterceptor<T> implements NestInterceptor<
   private getStatusMessage(statusCode: number): string {
     const messages: Record<number, string> = {
       200: 'OK',
-      201: 'Created',
+      201: 'Created successfully',
       204: 'Content not found 😥',
     };
     return messages[statusCode] ?? 'Success ';

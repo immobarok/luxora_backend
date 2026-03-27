@@ -1,6 +1,7 @@
 import {
   Controller,
   DefaultValuePipe,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -8,6 +9,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { ResponseMessage } from '../common/interceptors';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 import { DashboardService } from './dashboard.service';
 import {
@@ -93,5 +95,13 @@ export class DashboardController {
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   async getCustomerById(@Param('id') id: string) {
     return this.dashboardService.getCustomerById(id);
+  }
+
+  @Delete('customers/:id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ResponseMessage('Customer account deleted successfully')
+  async deleteCustomer(@Param('id') id: string): Promise<{ deleted: boolean }> {
+    await this.dashboardService.deleteCustomer(id);
+    return { deleted: true };
   }
 }
