@@ -1,12 +1,13 @@
 // src/order/checkout.service.ts
 
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { CartService } from '../cart/cart.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckoutDto, CheckoutResult } from './dto';
 import { PaymentMethodType, PaymentStatus } from '@prisma/client';
 import { CartEntity } from '../cart/entities/cart.entity';
+import { MailService } from '../mail/mail.service';
 
 export interface CheckoutValidationResult {
   isValid: boolean;
@@ -21,10 +22,13 @@ interface PaymentProcessResult {
 
 @Injectable()
 export class CheckoutService {
+  private readonly logger = new Logger(CheckoutService.name);
+
   constructor(
     private readonly orderService: OrderService,
     private readonly cartService: CartService,
     private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
   ) {}
 
   // Validate checkout
@@ -91,9 +95,40 @@ export class CheckoutService {
     // Clear cart only for COD or when payment is successfully captured.
     if (
       dto.paymentMethod === PaymentMethodType.COD ||
-      payment.status === 'CAPTURED'
+      payment.status === PaymentStatus.CAPTURED
     ) {
       await this.cartService.clearCart(userId);
+    }
+
+    // Send order confirmation email only after successful payment capture.
+    if (payment.status === PaymentStatus.CAPTURED) {
+      const customer = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      });
+
+      if (customer?.email) {
+        const customerName =
+          `${customer.firstName} ${customer.lastName}`.trim();
+        this.mailService
+          .sendOrderConfirmation(
+            customer.email,
+            order.orderNumber,
+            customerName || customer.email,
+            order.id,
+          )
+          .catch((err) => {
+            const errorMessage = err instanceof Error ? err.stack : String(err);
+            this.logger.error(
+              `Failed to send order confirmation for order ${order.orderNumber}`,
+              errorMessage,
+            );
+          });
+      }
     }
 
     return {

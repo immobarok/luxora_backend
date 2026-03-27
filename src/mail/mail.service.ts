@@ -207,8 +207,34 @@ const templates: Record<EmailTemplate, TemplateRenderer> = {
   }),
 
   [EmailTemplate.ORDER_CONFIRMATION]: (ctx) => ({
-    html: `<!DOCTYPE html><html><body><h1>Order Confirmed: #${getContextString(ctx, 'orderNumber', 'N/A')}</h1></body></html>`,
-    text: `Order Confirmed: #${getContextString(ctx, 'orderNumber', 'N/A')}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Order Confirmation</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; color: #222; line-height: 1.5;">
+        <h2>Order Confirmed</h2>
+        <p>Hello ${getContextString(ctx, 'name', 'there')},</p>
+        <p>Your order has been placed successfully.</p>
+        <p><strong>Order Number:</strong> ${getContextString(ctx, 'orderNumber', 'N/A')}</p>
+        <p><strong>Order ID:</strong> ${getContextString(ctx, 'orderId', 'N/A')}</p>
+        <p>You can use your Order Number/Order ID to track your order status.</p>
+        ${getContextString(ctx, 'trackUrl') ? `<p><a href="${getContextString(ctx, 'trackUrl')}">Track your order</a></p>` : ''}
+        <p>Thank you for shopping with Luxora.</p>
+      </body>
+      </html>
+    `,
+    text:
+      `Order Confirmed\n\n` +
+      `Hello ${getContextString(ctx, 'name', 'there')},\n\n` +
+      `Your order has been placed successfully.\n` +
+      `Order Number: ${getContextString(ctx, 'orderNumber', 'N/A')}\n` +
+      `Order ID: ${getContextString(ctx, 'orderId', 'N/A')}\n` +
+      `${getContextString(ctx, 'trackUrl') ? `Track your order: ${getContextString(ctx, 'trackUrl')}\n` : ''}\n` +
+      `Thank you for shopping with Luxora.`,
   }),
 
   [EmailTemplate.PASSWORD_CHANGED]: () => ({
@@ -395,12 +421,18 @@ export class MailService implements OnModuleInit {
     email: string,
     orderNumber: string,
     name: string,
+    orderId: string,
   ): Promise<void> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL')?.trim();
+    const trackUrl = frontendUrl
+      ? `${frontendUrl.replace(/\/$/, '')}/orders/track?orderId=${encodeURIComponent(orderId)}`
+      : undefined;
+
     await this.sendEmail({
       to: email,
       subject: `Order Confirmation: #${orderNumber}`,
       template: EmailTemplate.ORDER_CONFIRMATION,
-      context: { orderNumber, name },
+      context: { orderNumber, orderId, name, trackUrl },
     });
   }
 
