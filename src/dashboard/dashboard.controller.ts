@@ -5,10 +5,16 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 import { DashboardService } from './dashboard.service';
-import { CustomerListQueryDto, CustomerStatsQueryDto } from './dto';
+import {
+  CustomerExportQueryDto,
+  CustomerListQueryDto,
+  CustomerStatsQueryDto,
+} from './dto';
 
 @Controller('dashboard')
 export class DashboardController {
@@ -65,6 +71,22 @@ export class DashboardController {
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   async getCustomerStats(@Query() query: CustomerStatsQueryDto) {
     return this.dashboardService.getCustomerStats(query.days ?? 30);
+  }
+
+  @Get('customers/export')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  async exportCustomers(
+    @Query() query: CustomerExportQueryDto,
+    @Res() res: Response,
+  ) {
+    const exported = await this.dashboardService.exportCustomers(query);
+
+    res.setHeader('Content-Type', exported.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${exported.fileName}"`,
+    );
+    return res.send(exported.buffer);
   }
 
   @Get('customers/:id')

@@ -23,6 +23,11 @@ export enum SortOrder {
   DESC = 'desc',
 }
 
+export enum CustomerExportFormat {
+  CSV = 'csv',
+  XLSX = 'xlsx',
+}
+
 export class CustomerListQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
@@ -56,4 +61,10 @@ export class CustomerStatsQueryDto {
   @Min(1)
   @Max(365)
   days?: number = 30;
+}
+
+export class CustomerExportQueryDto extends CustomerListQueryDto {
+  @IsOptional()
+  @IsEnum(CustomerExportFormat)
+  format?: CustomerExportFormat = CustomerExportFormat.CSV;
 }

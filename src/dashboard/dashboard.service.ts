@@ -6,8 +6,21 @@ import {
   ProductStatus,
   Role,
 } from '@prisma/client';
+import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
-import { CustomerListQueryDto, CustomerSortBy, SortOrder } from './dto';
+import {
+  CustomerExportFormat,
+  CustomerExportQueryDto,
+  CustomerListQueryDto,
+  CustomerSortBy,
+  SortOrder,
+} from './dto';
+
+interface CustomerExportResult {
+  fileName: string;
+  contentType: string;
+  buffer: Uint8Array;
+}
 
 @Injectable()
 export class DashboardService {
@@ -489,31 +502,7 @@ export class DashboardService {
       Number.isFinite(query.limit) && query.limit > 0
         ? Math.min(query.limit, 100)
         : 20;
-
-    const where: Prisma.UserWhereInput = {
-      role: Role.CUSTOMER,
-    };
-
-    if (query.status) {
-      where.status = query.status;
-    }
-
-    const trimmedSearch = query.search?.trim();
-    if (trimmedSearch) {
-      where.OR = [
-        { firstName: { contains: trimmedSearch, mode: 'insensitive' } },
-        { lastName: { contains: trimmedSearch, mode: 'insensitive' } },
-        { email: { contains: trimmedSearch, mode: 'insensitive' } },
-        { phone: { contains: trimmedSearch, mode: 'insensitive' } },
-      ];
-    }
-
-    if (query.createdFrom || query.createdTo) {
-      where.createdAt = {
-        ...(query.createdFrom ? { gte: new Date(query.createdFrom) } : {}),
-        ...(query.createdTo ? { lte: new Date(query.createdTo) } : {}),
-      };
-    }
+    const where = this.buildCustomerWhere(query);
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -603,6 +592,119 @@ export class DashboardService {
         hasNextPage: safePage * safeLimit < total,
         hasPreviousPage: safePage > 1,
       },
+    };
+  }
+
+  async exportCustomers(
+    query: CustomerExportQueryDto,
+  ): Promise<CustomerExportResult> {
+    const where = this.buildCustomerWhere(query);
+    const format = query.format ?? CustomerExportFormat.CSV;
+
+    const users = await this.prisma.user.findMany({
+      where,
+      orderBy: this.buildCustomerOrderBy(
+        query.sortBy ?? CustomerSortBy.CREATED_AT,
+        query.sortOrder ?? SortOrder.DESC,
+      ),
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        status: true,
+        createdAt: true,
+        lastLoginAt: true,
+      },
+    });
+
+    const customerIds = users.map((user) => user.id);
+    const orderAggregates = customerIds.length
+      ? await this.prisma.order.groupBy({
+          by: ['userId'],
+          where: {
+            userId: { in: customerIds },
+            status: { not: OrderStatus.CANCELLED },
+          },
+          _count: { id: true },
+          _sum: { grandTotal: true },
+          _max: { placedAt: true },
+        })
+      : [];
+
+    const aggregatesByUser = new Map(
+      orderAggregates.map((row) => [row.userId, row]),
+    );
+
+    const rows = users.map((user, index) => {
+      const aggregate = aggregatesByUser.get(user.id);
+      const fullName = `${user.firstName} ${user.lastName}`.trim();
+
+      return {
+        CustomerCode: `CUST-${String(index + 1).padStart(4, '0')}`,
+        FullName: fullName,
+        Email: user.email,
+        Phone: user.phone ?? '',
+        Status: user.status,
+        OrdersCount: aggregate?._count.id ?? 0,
+        TotalSpent: Number(
+          this.decimalToNumber(aggregate?._sum.grandTotal).toFixed(2),
+        ),
+        LastOrderAt: aggregate?._max.placedAt
+          ? aggregate._max.placedAt.toISOString()
+          : '',
+        JoinedAt: user.createdAt.toISOString(),
+        LastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : '',
+      };
+    });
+
+    const dateSuffix = new Date().toISOString().slice(0, 10);
+
+    if (format === CustomerExportFormat.XLSX) {
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+      const workbookArray = XLSX.write(workbook, {
+        type: 'array',
+        bookType: 'xlsx',
+      }) as ArrayBuffer;
+      const buffer = Buffer.from(workbookArray);
+
+      return {
+        fileName: `customers-export-${dateSuffix}.xlsx`,
+        contentType:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        buffer,
+      };
+    }
+
+    const headers = [
+      'CustomerCode',
+      'FullName',
+      'Email',
+      'Phone',
+      'Status',
+      'OrdersCount',
+      'TotalSpent',
+      'LastOrderAt',
+      'JoinedAt',
+      'LastLoginAt',
+    ] as const;
+    const csvLines = [headers.join(',')];
+
+    for (const row of rows) {
+      const line = headers
+        .map((header) => this.escapeCsvValue(String(row[header] ?? '')))
+        .join(',');
+      csvLines.push(line);
+    }
+
+    const buffer = Buffer.from(csvLines.join('\n'), 'utf-8');
+    return {
+      fileName: `customers-export-${dateSuffix}.csv`,
+      contentType: 'text/csv; charset=utf-8',
+      buffer,
     };
   }
 
@@ -846,6 +948,45 @@ export class DashboardService {
     }, 0);
 
     return total / groups.length;
+  }
+
+  private buildCustomerWhere(
+    query: Pick<
+      CustomerListQueryDto,
+      'search' | 'status' | 'createdFrom' | 'createdTo'
+    >,
+  ): Prisma.UserWhereInput {
+    const where: Prisma.UserWhereInput = {
+      role: Role.CUSTOMER,
+    };
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    const trimmedSearch = query.search?.trim();
+    if (trimmedSearch) {
+      where.OR = [
+        { firstName: { contains: trimmedSearch, mode: 'insensitive' } },
+        { lastName: { contains: trimmedSearch, mode: 'insensitive' } },
+        { email: { contains: trimmedSearch, mode: 'insensitive' } },
+        { phone: { contains: trimmedSearch, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.createdFrom || query.createdTo) {
+      where.createdAt = {
+        ...(query.createdFrom ? { gte: new Date(query.createdFrom) } : {}),
+        ...(query.createdTo ? { lte: new Date(query.createdTo) } : {}),
+      };
+    }
+
+    return where;
+  }
+
+  private escapeCsvValue(value: string): string {
+    const escaped = value.replace(/"/g, '""');
+    return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
   }
 
   private decimalToNumber(
