@@ -96,11 +96,34 @@ export class ProductController {
     return this.productService.findBySlug(slug);
   }
 
+  @Get('slug/:slug/related')
+  @Public()
+  @ResponseMessage('Related products retrieved successfully')
+  async findRelatedBySlug(
+    @Param('slug') slug: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.productService.findRelatedBySlug(
+      slug,
+      this.normalizeLimit(limit),
+    );
+  }
+
   @Get(':id')
   @Public()
   @ResponseMessage('Product retrieved successfully')
   async findById(@Param('id') id: string) {
     return this.productService.findById(id);
+  }
+
+  @Get(':id/related')
+  @Public()
+  @ResponseMessage('Related products retrieved successfully')
+  async findRelatedById(
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.productService.findRelatedById(id, this.normalizeLimit(limit));
   }
 
   @Patch(':id')
@@ -182,5 +205,13 @@ export class ProductController {
     @Req() req: AuthenticatedRequest,
   ) {
     await this.productService.remove(id, req.user.id, true);
+  }
+
+  private normalizeLimit(limit?: string): number {
+    const parsed = Number.parseInt(limit ?? '8', 10);
+    if (Number.isNaN(parsed)) {
+      return 8;
+    }
+    return Math.min(Math.max(parsed, 1), 24);
   }
 }

@@ -10,6 +10,7 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import {
+  Gender,
   MediaCategory,
   Prisma,
   ProductStatus,
@@ -213,6 +214,54 @@ export class ProductService {
     const result = this.serializeProduct(product);
     await this.cacheManager.set(cacheKey, result, this.cacheTtlSeconds);
     return result;
+  }
+
+  async findRelatedById(id: string, limit = 8) {
+    const base = await this.prisma.product.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        brandId: true,
+        gender: true,
+        categories: { select: { categoryId: true } },
+      },
+    });
+
+    if (!base) {
+      throw new NotFoundException(`Product with ID "${id}" not found`);
+    }
+
+    return this.findRelated(
+      base.id,
+      base.brandId,
+      base.gender,
+      base.categories,
+      limit,
+    );
+  }
+
+  async findRelatedBySlug(slug: string, limit = 8) {
+    const base = await this.prisma.product.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        brandId: true,
+        gender: true,
+        categories: { select: { categoryId: true } },
+      },
+    });
+
+    if (!base) {
+      throw new NotFoundException(`Product with slug "${slug}" not found`);
+    }
+
+    return this.findRelated(
+      base.id,
+      base.brandId,
+      base.gender,
+      base.categories,
+      limit,
+    );
   }
 
   async update(id: string, adminId: string, dto: UpdateProductDto) {
@@ -796,6 +845,67 @@ export class ProductService {
     }
 
     return options;
+  }
+
+  private async findRelated(
+    productId: string,
+    brandId: string | null,
+    gender: Gender,
+    categories: Array<{ categoryId: string }>,
+    limit: number,
+  ) {
+    const safeLimit = Math.min(Math.max(limit || 8, 1), 24);
+    const categoryIds = categories.map((row) => row.categoryId);
+
+    const orFilters: Prisma.ProductWhereInput[] = [{ gender }];
+    if (brandId) {
+      orFilters.push({ brandId });
+    }
+    if (categoryIds.length > 0) {
+      orFilters.push({
+        categories: {
+          some: {
+            categoryId: { in: categoryIds },
+          },
+        },
+      });
+    }
+
+    const related = await this.prisma.product.findMany({
+      where: {
+        id: { not: productId },
+        status: { in: STOREFRONT_VISIBLE_STATUSES },
+        OR: orFilters,
+      },
+      take: safeLimit,
+      orderBy: [
+        { isFeatured: 'desc' },
+        { totalSales: 'desc' },
+        { publishedAt: 'desc' },
+        { createdAt: 'desc' },
+      ],
+      include: PRODUCT_INCLUDE,
+    });
+
+    if (related.length < safeLimit) {
+      const relatedIds = new Set(related.map((item) => item.id));
+      const fallback = await this.prisma.product.findMany({
+        where: {
+          id: {
+            not: productId,
+            notIn: Array.from(relatedIds),
+          },
+          status: { in: STOREFRONT_VISIBLE_STATUSES },
+        },
+        take: safeLimit - related.length,
+        orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+        include: PRODUCT_INCLUDE,
+      });
+
+      related.push(...fallback);
+    }
+
+    return related.map((item) => this.serializeProduct(item));
   }
 
   private buildWhereClause(
