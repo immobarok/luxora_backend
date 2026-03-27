@@ -23,7 +23,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 
 interface RequestWithUser extends Request {
-  user: { id: string };
+  user: { id: string; email: string };
 }
 
 @Controller('orders')
@@ -61,14 +61,14 @@ export class OrderController {
     @Req() req: RequestWithUser,
     @Query() query: OrderQueryDto,
   ) {
-    return this.orderService.getUserOrders(req.user.id, query);
+    return this.orderService.getUserOrders(req.user.id, query, req.user.email);
   }
 
   // Get order by ID
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getOrder(@Req() req: RequestWithUser, @Param('id') orderId: string) {
-    return this.orderService.getOrderById(orderId, req.user.id);
+    return this.orderService.getOrderById(orderId, req.user.id, req.user.email);
   }
 
   // Cancel order

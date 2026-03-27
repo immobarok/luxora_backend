@@ -162,9 +162,16 @@ export class OrderService {
   }
 
   // Get order by ID
-  async getOrderById(orderId: string, userId: string): Promise<OrderEntity> {
+  async getOrderById(
+    orderId: string,
+    userId: string,
+    email?: string,
+  ): Promise<OrderEntity> {
     const order = await this.prisma.order.findFirst({
-      where: { id: orderId, userId },
+      where: {
+        id: orderId,
+        OR: [{ userId }, ...(email ? [{ guestEmail: email }] : [])],
+      },
       include: {
         items: true,
         shippingAddress: true,
@@ -236,22 +243,37 @@ export class OrderService {
   }
 
   // Get user orders
-  async getUserOrders(userId: string, query: OrderQueryDto) {
+  async getUserOrders(userId: string, query: OrderQueryDto, email?: string) {
     const { page = 1, limit = 10, status, search } = query;
 
-    const where: Prisma.OrderWhereInput = { userId };
+    const ownershipFilter: Prisma.OrderWhereInput = {
+      OR: [{ userId }, ...(email ? [{ guestEmail: email }] : [])],
+    };
 
-    if (status) where.status = status;
-    if (search) {
-      where.OR = [
-        { orderNumber: { contains: search, mode: 'insensitive' } },
-        {
-          items: {
-            some: { productName: { contains: search, mode: 'insensitive' } },
-          },
-        },
-      ];
+    const andFilters: Prisma.OrderWhereInput[] = [ownershipFilter];
+
+    if (status) {
+      andFilters.push({ status });
     }
+
+    if (search) {
+      andFilters.push({
+        OR: [
+          { orderNumber: { contains: search, mode: 'insensitive' as const } },
+          {
+            items: {
+              some: {
+                productName: { contains: search, mode: 'insensitive' as const },
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    const where: Prisma.OrderWhereInput = {
+      AND: andFilters,
+    };
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
