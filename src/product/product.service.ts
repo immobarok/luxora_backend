@@ -134,11 +134,11 @@ export class ProductService {
   }
 
   async findFeatured() {
-    const cacheKey = 'products:featured';
+    const cacheKey = 'products:featured:v2';
     const cached = await this.cacheManager.get<unknown>(cacheKey);
     if (cached) return cached;
 
-    const products = await this.prisma.product.findMany({
+    const featured = await this.prisma.product.findMany({
       where: {
         isFeatured: true,
         status: { in: STOREFRONT_VISIBLE_STATUSES },
@@ -148,17 +148,54 @@ export class ProductService {
       include: PRODUCT_INCLUDE,
     });
 
+    const products = [...featured];
+
+    if (products.length < 10) {
+      const existingIds = products.map((item) => item.id);
+
+      // Tier 2: include additional featured products from non-discontinued statuses.
+      const featuredFallback = await this.prisma.product.findMany({
+        where: {
+          isFeatured: true,
+          status: { not: ProductStatus.DISCONTINUED },
+          id: { notIn: existingIds.length ? existingIds : undefined },
+        },
+        take: 10 - products.length,
+        orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+        include: PRODUCT_INCLUDE,
+      });
+
+      products.push(...featuredFallback);
+    }
+
+    if (products.length < 10) {
+      const existingIds = products.map((item) => item.id);
+
+      // Tier 3: fill from any non-discontinued products to always return up to 10.
+      const fallback = await this.prisma.product.findMany({
+        where: {
+          status: { not: ProductStatus.DISCONTINUED },
+          id: { notIn: existingIds.length ? existingIds : undefined },
+        },
+        take: 10 - products.length,
+        orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+        include: PRODUCT_INCLUDE,
+      });
+
+      products.push(...fallback);
+    }
+
     const result = products.map((p) => this.serializeProduct(p));
     await this.cacheManager.set(cacheKey, result, this.cacheTtlSeconds);
     return result;
   }
 
   async findNewArrivals() {
-    const cacheKey = 'products:new-arrivals';
+    const cacheKey = 'products:new-arrivals:v2';
     const cached = await this.cacheManager.get<unknown>(cacheKey);
     if (cached) return cached;
 
-    const products = await this.prisma.product.findMany({
+    const newArrivals = await this.prisma.product.findMany({
       where: {
         isNewArrival: true,
         status: { in: STOREFRONT_VISIBLE_STATUSES },
@@ -167,6 +204,43 @@ export class ProductService {
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
       include: PRODUCT_INCLUDE,
     });
+
+    const products = [...newArrivals];
+
+    if (products.length < 10) {
+      const existingIds = products.map((item) => item.id);
+
+      // Tier 2: include additional new-arrival products from non-discontinued statuses.
+      const newArrivalFallback = await this.prisma.product.findMany({
+        where: {
+          isNewArrival: true,
+          status: { not: ProductStatus.DISCONTINUED },
+          id: { notIn: existingIds.length ? existingIds : undefined },
+        },
+        take: 10 - products.length,
+        orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+        include: PRODUCT_INCLUDE,
+      });
+
+      products.push(...newArrivalFallback);
+    }
+
+    if (products.length < 10) {
+      const existingIds = products.map((item) => item.id);
+
+      // Tier 3: fill with any non-discontinued products to always return up to 10.
+      const fallback = await this.prisma.product.findMany({
+        where: {
+          status: { not: ProductStatus.DISCONTINUED },
+          id: { notIn: existingIds.length ? existingIds : undefined },
+        },
+        take: 10 - products.length,
+        orderBy: [{ isNewArrival: 'desc' }, { createdAt: 'desc' }],
+        include: PRODUCT_INCLUDE,
+      });
+
+      products.push(...fallback);
+    }
 
     const result = products.map((p) => this.serializeProduct(p));
     await this.cacheManager.set(cacheKey, result, this.cacheTtlSeconds);
@@ -984,7 +1058,12 @@ export class ProductService {
     id?: string,
     slug?: string,
   ): Promise<void> {
-    const keys: string[] = ['products:featured', 'products:new-arrivals'];
+    const keys: string[] = [
+      'products:featured',
+      'products:featured:v2',
+      'products:new-arrivals',
+      'products:new-arrivals:v2',
+    ];
     if (id) keys.push(`product:${id}:active`, `product:${id}:all`);
     if (slug) keys.push(`product:slug:${slug}`);
 
