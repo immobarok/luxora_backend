@@ -82,6 +82,13 @@ export class ProductController {
     return this.productService.findFeatured();
   }
 
+  @Get('new-arrivals')
+  @Public()
+  @ResponseMessage('New arrivals retrieved successfully')
+  async findNewArrivals() {
+    return this.productService.findNewArrivals();
+  }
+
   @Get('slug/:slug')
   @Public()
   @ResponseMessage('Product retrieved successfully')
@@ -90,6 +97,7 @@ export class ProductController {
   }
 
   @Get(':id')
+  @Public()
   @ResponseMessage('Product retrieved successfully')
   async findById(@Param('id') id: string) {
     return this.productService.findById(id);

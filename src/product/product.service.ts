@@ -28,6 +28,11 @@ const PRODUCT_INCLUDE = {
   variants: true,
 } satisfies Prisma.ProductInclude;
 
+const STOREFRONT_VISIBLE_STATUSES = [
+  ProductStatus.ACTIVE,
+  ProductStatus.APPROVED,
+];
+
 @Injectable()
 export class ProductService {
   private readonly logger = new Logger(ProductService.name);
@@ -135,10 +140,30 @@ export class ProductService {
     const products = await this.prisma.product.findMany({
       where: {
         isFeatured: true,
-        status: ProductStatus.ACTIVE,
+        status: { in: STOREFRONT_VISIBLE_STATUSES },
       },
       take: 10,
       orderBy: { createdAt: 'desc' },
+      include: PRODUCT_INCLUDE,
+    });
+
+    const result = products.map((p) => this.serializeProduct(p));
+    await this.cacheManager.set(cacheKey, result, this.cacheTtlSeconds);
+    return result;
+  }
+
+  async findNewArrivals() {
+    const cacheKey = 'products:new-arrivals';
+    const cached = await this.cacheManager.get<unknown>(cacheKey);
+    if (cached) return cached;
+
+    const products = await this.prisma.product.findMany({
+      where: {
+        isNewArrival: true,
+        status: { in: STOREFRONT_VISIBLE_STATUSES },
+      },
+      take: 10,
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
       include: PRODUCT_INCLUDE,
     });
 
@@ -849,7 +874,7 @@ export class ProductService {
     id?: string,
     slug?: string,
   ): Promise<void> {
-    const keys: string[] = ['products:featured'];
+    const keys: string[] = ['products:featured', 'products:new-arrivals'];
     if (id) keys.push(`product:${id}:active`, `product:${id}:all`);
     if (slug) keys.push(`product:slug:${slug}`);
 
