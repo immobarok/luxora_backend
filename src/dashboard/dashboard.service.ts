@@ -1,6 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { OrderStatus, ProductStatus, Role } from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  AccountStatus,
+  OrderStatus,
+  Prisma,
+  ProductStatus,
+  Role,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CustomerListQueryDto, CustomerSortBy, SortOrder } from './dto';
 
 @Injectable()
 export class DashboardService {
@@ -473,6 +480,372 @@ export class DashboardService {
         },
       },
     };
+  }
+
+  async getCustomers(query: CustomerListQueryDto) {
+    const safePage =
+      Number.isFinite(query.page) && query.page > 0 ? query.page : 1;
+    const safeLimit =
+      Number.isFinite(query.limit) && query.limit > 0
+        ? Math.min(query.limit, 100)
+        : 20;
+
+    const where: Prisma.UserWhereInput = {
+      role: Role.CUSTOMER,
+    };
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    const trimmedSearch = query.search?.trim();
+    if (trimmedSearch) {
+      where.OR = [
+        { firstName: { contains: trimmedSearch, mode: 'insensitive' } },
+        { lastName: { contains: trimmedSearch, mode: 'insensitive' } },
+        { email: { contains: trimmedSearch, mode: 'insensitive' } },
+        { phone: { contains: trimmedSearch, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.createdFrom || query.createdTo) {
+      where.createdAt = {
+        ...(query.createdFrom ? { gte: new Date(query.createdFrom) } : {}),
+        ...(query.createdTo ? { lte: new Date(query.createdTo) } : {}),
+      };
+    }
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip: (safePage - 1) * safeLimit,
+        take: safeLimit,
+        orderBy: this.buildCustomerOrderBy(
+          query.sortBy ?? CustomerSortBy.CREATED_AT,
+          query.sortOrder ?? SortOrder.DESC,
+        ),
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          avatarUrl: true,
+          status: true,
+          createdAt: true,
+          lastLoginAt: true,
+        },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    if (!users.length) {
+      return {
+        data: [],
+        meta: {
+          total,
+          page: safePage,
+          limit: safeLimit,
+          totalPages: Math.ceil(total / safeLimit),
+          hasNextPage: safePage * safeLimit < total,
+          hasPreviousPage: safePage > 1,
+        },
+      };
+    }
+
+    const customerIds = users.map((user) => user.id);
+    const orderAggregates = await this.prisma.order.groupBy({
+      by: ['userId'],
+      where: {
+        userId: { in: customerIds },
+        status: { not: OrderStatus.CANCELLED },
+      },
+      _count: { id: true },
+      _sum: { grandTotal: true },
+      _max: { placedAt: true },
+    });
+
+    const aggregatesByUser = new Map(
+      orderAggregates.map((row) => [row.userId, row]),
+    );
+
+    const data = users.map((user, index) => {
+      const aggregate = aggregatesByUser.get(user.id);
+      const ordersCount = aggregate?._count.id ?? 0;
+      const totalSpent = this.decimalToNumber(aggregate?._sum.grandTotal);
+      const fullName = `${user.firstName} ${user.lastName}`.trim();
+
+      return {
+        id: user.id,
+        customerCode: `CUST-${String((safePage - 1) * safeLimit + index + 1).padStart(4, '0')}`,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName,
+        email: user.email,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        status: user.status,
+        ordersCount,
+        totalSpent: Number(totalSpent.toFixed(2)),
+        lastOrderAt: aggregate?._max.placedAt ?? null,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+      };
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page: safePage,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
+        hasNextPage: safePage * safeLimit < total,
+        hasPreviousPage: safePage > 1,
+      },
+    };
+  }
+
+  async getCustomerStats(days = 30) {
+    const safeDays =
+      Number.isFinite(days) && days > 0 ? Math.min(days, 365) : 30;
+
+    const now = new Date();
+    const currentStart = new Date(now);
+    currentStart.setDate(currentStart.getDate() - safeDays);
+
+    const previousStart = new Date(currentStart);
+    previousStart.setDate(previousStart.getDate() - safeDays);
+
+    const [
+      totalCustomers,
+      activeCustomers,
+      newCustomersCurrent,
+      newCustomersPrevious,
+      activeCurrentPeriod,
+      activePreviousPeriod,
+      allTimeCustomerSpend,
+      currentPeriodCustomerSpend,
+      previousPeriodCustomerSpend,
+    ] = await Promise.all([
+      this.prisma.user.count({
+        where: { role: Role.CUSTOMER },
+      }),
+      this.prisma.user.count({
+        where: { role: Role.CUSTOMER, status: AccountStatus.ACTIVE },
+      }),
+      this.prisma.user.count({
+        where: {
+          role: Role.CUSTOMER,
+          createdAt: { gte: currentStart, lte: now },
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          role: Role.CUSTOMER,
+          createdAt: { gte: previousStart, lt: currentStart },
+        },
+      }),
+      this.prisma.order.groupBy({
+        by: ['userId'],
+        where: {
+          status: { not: OrderStatus.CANCELLED },
+          placedAt: { gte: currentStart, lte: now },
+        },
+        _sum: { grandTotal: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ['userId'],
+        where: {
+          status: { not: OrderStatus.CANCELLED },
+          placedAt: { gte: previousStart, lt: currentStart },
+        },
+        _sum: { grandTotal: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ['userId'],
+        where: {
+          status: { not: OrderStatus.CANCELLED },
+        },
+        _sum: { grandTotal: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ['userId'],
+        where: {
+          status: { not: OrderStatus.CANCELLED },
+          placedAt: { gte: currentStart, lte: now },
+        },
+        _sum: { grandTotal: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ['userId'],
+        where: {
+          status: { not: OrderStatus.CANCELLED },
+          placedAt: { gte: previousStart, lt: currentStart },
+        },
+        _sum: { grandTotal: true },
+      }),
+    ]);
+
+    const avgLifetimeValue =
+      this.calculateAverageFromGroupedSums(allTimeCustomerSpend);
+    const avgLifetimeValueCurrent = this.calculateAverageFromGroupedSums(
+      currentPeriodCustomerSpend,
+    );
+    const avgLifetimeValuePrevious = this.calculateAverageFromGroupedSums(
+      previousPeriodCustomerSpend,
+    );
+
+    return {
+      periodDays: safeDays,
+      cards: {
+        totalCustomers: {
+          value: totalCustomers,
+          growthPercent: this.calculateGrowthPercent(
+            newCustomersCurrent,
+            newCustomersPrevious,
+          ),
+        },
+        newCustomers: {
+          value: newCustomersCurrent,
+          growthPercent: this.calculateGrowthPercent(
+            newCustomersCurrent,
+            newCustomersPrevious,
+          ),
+        },
+        activeCustomers: {
+          value: activeCustomers,
+          growthPercent: this.calculateGrowthPercent(
+            activeCurrentPeriod.length,
+            activePreviousPeriod.length,
+          ),
+        },
+        avgLifetimeValue: {
+          value: Number(avgLifetimeValue.toFixed(2)),
+          growthPercent: this.calculateGrowthPercent(
+            avgLifetimeValueCurrent,
+            avgLifetimeValuePrevious,
+          ),
+          currency: 'USD',
+        },
+      },
+    };
+  }
+
+  async getCustomerById(customerId: string) {
+    const customer = await this.prisma.user.findFirst({
+      where: {
+        id: customerId,
+        role: Role.CUSTOMER,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        status: true,
+        isEmailVerified: true,
+        isPhoneVerified: true,
+        createdAt: true,
+        updatedAt: true,
+        lastLoginAt: true,
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    const [ordersCount, orderSpend, lastOrder] = await Promise.all([
+      this.prisma.order.count({
+        where: {
+          userId: customerId,
+          status: { not: OrderStatus.CANCELLED },
+        },
+      }),
+      this.prisma.order.aggregate({
+        where: {
+          userId: customerId,
+          status: { not: OrderStatus.CANCELLED },
+        },
+        _sum: { grandTotal: true },
+        _avg: { grandTotal: true },
+      }),
+      this.prisma.order.findFirst({
+        where: {
+          userId: customerId,
+          status: { not: OrderStatus.CANCELLED },
+        },
+        orderBy: { placedAt: 'desc' },
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          grandTotal: true,
+          placedAt: true,
+        },
+      }),
+    ]);
+
+    return {
+      customer: {
+        ...customer,
+        fullName: `${customer.firstName} ${customer.lastName}`.trim(),
+      },
+      metrics: {
+        ordersCount,
+        totalSpent: Number(
+          this.decimalToNumber(orderSpend._sum.grandTotal).toFixed(2),
+        ),
+        averageOrderValue: Number(
+          this.decimalToNumber(orderSpend._avg.grandTotal).toFixed(2),
+        ),
+        lastOrderAt: lastOrder?.placedAt ?? null,
+      },
+      lastOrder: lastOrder
+        ? {
+            ...lastOrder,
+            grandTotal: Number(
+              this.decimalToNumber(lastOrder.grandTotal).toFixed(2),
+            ),
+          }
+        : null,
+    };
+  }
+
+  private buildCustomerOrderBy(
+    sortBy: CustomerSortBy,
+    sortOrder: SortOrder,
+  ): Prisma.UserOrderByWithRelationInput {
+    switch (sortBy) {
+      case CustomerSortBy.NAME:
+        return { firstName: sortOrder };
+      case CustomerSortBy.EMAIL:
+        return { email: sortOrder };
+      case CustomerSortBy.STATUS:
+        return { status: sortOrder };
+      case CustomerSortBy.CREATED_AT:
+      default:
+        return { createdAt: sortOrder };
+    }
+  }
+
+  private calculateAverageFromGroupedSums(
+    groups: Array<{
+      _sum: { grandTotal: { toNumber: () => number } | number | null };
+    }>,
+  ): number {
+    if (!groups.length) {
+      return 0;
+    }
+
+    const total = groups.reduce((acc, group) => {
+      return acc + this.decimalToNumber(group._sum.grandTotal);
+    }, 0);
+
+    return total / groups.length;
   }
 
   private decimalToNumber(

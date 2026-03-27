@@ -2,11 +2,13 @@ import {
   Controller,
   DefaultValuePipe,
   Get,
+  Param,
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 import { DashboardService } from './dashboard.service';
+import { CustomerListQueryDto, CustomerStatsQueryDto } from './dto';
 
 @Controller('dashboard')
 export class DashboardController {
@@ -51,5 +53,23 @@ export class DashboardController {
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
   ) {
     return this.dashboardService.getOverview(days);
+  }
+
+  @Get('customers')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  async getCustomers(@Query() query: CustomerListQueryDto) {
+    return this.dashboardService.getCustomers(query);
+  }
+
+  @Get('customers/stats')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  async getCustomerStats(@Query() query: CustomerStatsQueryDto) {
+    return this.dashboardService.getCustomerStats(query.days ?? 30);
+  }
+
+  @Get('customers/:id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  async getCustomerById(@Param('id') id: string) {
+    return this.dashboardService.getCustomerById(id);
   }
 }
