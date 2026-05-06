@@ -16,6 +16,34 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { Gender, ProductStatus } from '@prisma/client';
 
+const toBoolean = ({ value }: { value: unknown }) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const lowered = value.trim().toLowerCase();
+    if (['true', '1', 'yes'].includes(lowered)) return true;
+    if (['false', '0', 'no'].includes(lowered)) return false;
+  }
+  return value;
+};
+
+export enum ProductSortBy {
+  CREATED_AT = 'createdAt',
+  UPDATED_AT = 'updatedAt',
+  PRICE = 'price',
+  NAME = 'name',
+  POPULARITY = 'popularity',
+  RATING = 'rating',
+  LATEST = 'latest',
+  OLDEST = 'oldest',
+  PRICE_LOW_TO_HIGH = 'price_low_to_high',
+  PRICE_HIGH_TO_LOW = 'price_high_to_low',
+}
+
+export enum SortOrder {
+  ASC = 'asc',
+  DESC = 'desc',
+}
+
 export class PaginationDto {
   @IsInt()
   @Min(1)
@@ -32,13 +60,13 @@ export class PaginationDto {
 }
 
 export class ProductSortDto {
-  @IsString()
+  @IsEnum(ProductSortBy)
   @IsOptional()
-  sortBy?: string = 'createdAt';
+  sortBy?: ProductSortBy = ProductSortBy.CREATED_AT;
 
-  @IsString()
+  @IsEnum(SortOrder)
   @IsOptional()
-  sortOrder?: 'asc' | 'desc' = 'desc';
+  sortOrder?: SortOrder = SortOrder.DESC;
 }
 
 export class ProductFilterDto {
@@ -77,12 +105,42 @@ export class ProductFilterDto {
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(toBoolean)
   isFeatured?: boolean;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(toBoolean)
+  isNewArrival?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(toBoolean)
+  isBestSeller?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(toBoolean)
+  isSale?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(toBoolean)
+  trackInventory?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(toBoolean)
+  allowBackorder?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(toBoolean)
+  isFreeShipping?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(toBoolean)
   inStock?: boolean;
 
   @IsNumber()
@@ -96,9 +154,73 @@ export class ProductFilterDto {
   @IsOptional()
   @Type(() => Number)
   maxPrice?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  minRating?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  maxRating?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  minSales?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  maxSales?: number;
+
+  @IsString()
+  @IsOptional()
+  sku?: string;
+
+  @IsString()
+  @IsOptional()
+  slug?: string;
+
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  createdBy?: string;
+
+  @IsOptional()
+  @Type(() => Date)
+  createdFrom?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  createdTo?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  publishedFrom?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  publishedTo?: Date;
 }
 
 export class ProductListQueryDto extends ProductFilterDto {
+  @IsEnum(ProductSortBy)
+  @IsOptional()
+  sortBy?: ProductSortBy;
+
+  @IsEnum(SortOrder)
+  @IsOptional()
+  sortOrder?: SortOrder;
+
   @ValidateNested()
   @Type(() => ProductSortDto)
   @IsOptional()

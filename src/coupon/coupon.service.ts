@@ -213,7 +213,7 @@ export class CouponService {
     }
 
     if (coupon.requiresLogin && !userId) {
-      throw new BadRequestException('Coupon requires login');
+      throw new BadRequestException('Only authorized users can use the coupon');
     }
 
     if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
@@ -222,7 +222,9 @@ export class CouponService {
 
     if (coupon.newCustomersOnly) {
       if (!userId) {
-        throw new BadRequestException('Coupon is for new customers only');
+        throw new BadRequestException(
+          'Only authorized users can use the coupon',
+        );
       }
       const orderCount = await this.prisma.order.count({ where: { userId } });
       if (orderCount > 0) {

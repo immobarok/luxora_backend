@@ -18,7 +18,11 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto, CreateVariantDto } from './dto/create-product.dto';
-import { ProductListQueryDto } from './dto/product-list-query.dto';
+import {
+  ProductListQueryDto,
+  ProductSortBy,
+  SortOrder,
+} from './dto/product-list-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 const PRODUCT_INCLUDE = {
@@ -100,13 +104,13 @@ export class ProductService {
     const cached = await this.cacheManager.get<unknown>(cacheKey);
     if (cached) return cached;
 
-    const { pagination, sort, ...filters } = query;
+    const { pagination, sort, sortBy, sortOrder, ...filters } = query;
     const page = pagination?.page ?? 1;
     const limit = pagination?.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where = this.buildWhereClause(filters);
-    const orderBy = this.buildOrderBy(sort);
+    const orderBy = this.buildOrderBy(sort, sortBy, sortOrder);
 
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
@@ -1000,6 +1004,23 @@ export class ProductService {
     if (filters.status) where.status = filters.status;
     if (filters.brandId) where.brandId = filters.brandId;
     if (filters.isFeatured !== undefined) where.isFeatured = filters.isFeatured;
+    if (filters.isNewArrival !== undefined)
+      where.isNewArrival = filters.isNewArrival;
+    if (filters.isBestSeller !== undefined)
+      where.isBestSeller = filters.isBestSeller;
+    if (filters.isSale !== undefined) where.isSale = filters.isSale;
+    if (filters.trackInventory !== undefined)
+      where.trackInventory = filters.trackInventory;
+    if (filters.allowBackorder !== undefined)
+      where.allowBackorder = filters.allowBackorder;
+    if (filters.isFreeShipping !== undefined)
+      where.isFreeShipping = filters.isFreeShipping;
+    if (filters.sku) where.sku = { contains: filters.sku, mode: 'insensitive' };
+    if (filters.slug)
+      where.slug = { contains: filters.slug, mode: 'insensitive' };
+    if (filters.name)
+      where.name = { contains: filters.name, mode: 'insensitive' };
+    if (filters.createdBy) where.createdBy = filters.createdBy;
 
     if (filters.inStock !== undefined) {
       where.variants = {
@@ -1027,14 +1048,57 @@ export class ProductService {
         where.basePrice.lte = filters.maxPrice;
     }
 
+    if (filters.minRating !== undefined || filters.maxRating !== undefined) {
+      where.avgRating = {};
+      if (filters.minRating !== undefined)
+        where.avgRating.gte = filters.minRating;
+      if (filters.maxRating !== undefined)
+        where.avgRating.lte = filters.maxRating;
+    }
+
+    if (filters.minSales !== undefined || filters.maxSales !== undefined) {
+      where.totalSales = {};
+      if (filters.minSales !== undefined)
+        where.totalSales.gte = Math.floor(filters.minSales);
+      if (filters.maxSales !== undefined)
+        where.totalSales.lte = Math.floor(filters.maxSales);
+    }
+
+    if (filters.createdFrom || filters.createdTo) {
+      where.createdAt = {};
+      if (filters.createdFrom) where.createdAt.gte = filters.createdFrom;
+      if (filters.createdTo) where.createdAt.lte = filters.createdTo;
+    }
+
+    if (filters.publishedFrom || filters.publishedTo) {
+      where.publishedAt = {};
+      if (filters.publishedFrom) where.publishedAt.gte = filters.publishedFrom;
+      if (filters.publishedTo) where.publishedAt.lte = filters.publishedTo;
+    }
+
     return where;
   }
 
   private buildOrderBy(
     sort?: ProductListQueryDto['sort'],
+    flatSortBy?: ProductListQueryDto['sortBy'],
+    flatSortOrder?: ProductListQueryDto['sortOrder'],
   ): Prisma.ProductOrderByWithRelationInput {
-    const sortBy = sort?.sortBy ?? 'createdAt';
-    const sortOrder = sort?.sortOrder ?? 'desc';
+    const sortBy = flatSortBy ?? sort?.sortBy ?? ProductSortBy.CREATED_AT;
+    const sortOrder = flatSortOrder ?? sort?.sortOrder ?? SortOrder.DESC;
+
+    if (sortBy === ProductSortBy.LATEST) {
+      return { createdAt: 'desc' };
+    }
+    if (sortBy === ProductSortBy.OLDEST) {
+      return { createdAt: 'asc' };
+    }
+    if (sortBy === ProductSortBy.PRICE_LOW_TO_HIGH) {
+      return { basePrice: 'asc' };
+    }
+    if (sortBy === ProductSortBy.PRICE_HIGH_TO_LOW) {
+      return { basePrice: 'desc' };
+    }
 
     const map: Record<string, Prisma.ProductOrderByWithRelationInput> = {
       createdAt: { createdAt: sortOrder },
