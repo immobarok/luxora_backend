@@ -47,8 +47,8 @@ export interface ApiResponse<T> {
   success: boolean;
   statusCode: number;
   message: string;
-  path: string;
-  timestamp: string;
+  path?: string;
+  timestamp?: string;
   data: T;
 }
 
@@ -97,13 +97,14 @@ export class TransformInterceptor<T> implements NestInterceptor<
     const request = httpCtx.getRequest<Request>();
     const response = httpCtx.getResponse();
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
     return next.handle().pipe(
       map((data) => ({
         success: true,
         statusCode: response.statusCode,
         message: customMessage || this.getStatusMessage(response.statusCode),
-        path: request.originalUrl,
-        timestamp: new Date().toISOString(),
+        ...(isProduction ? {} : { path: request.originalUrl, timestamp: new Date().toISOString() }),
         data,
       })),
     );

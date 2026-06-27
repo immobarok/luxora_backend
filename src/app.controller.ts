@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { Public } from './common/decorators';
+import { SkipTransform } from './common/interceptors/transform.interceptor';
 
 @Controller()
 export class AppController {
@@ -13,6 +14,7 @@ export class AppController {
   }
 
   @Public()
+  @SkipTransform()
   @Get('health')
   health(): { status: string } {
     return { status: 'ok' };

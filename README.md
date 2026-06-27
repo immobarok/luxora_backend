@@ -163,6 +163,25 @@ npm run start:prod
 
 ---
 
+## 🏥 Checking the Production API
+
+To verify that your production API is running properly, you can ping the built-in Health Check endpoint. This is particularly useful for uptime monitors (like UptimeRobot) or load balancer health checks.
+
+```bash
+curl -X GET https://your-production-url.com/api/v1/health
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "status": "ok"
+}
+```
+
+> **Note:** The health check endpoint deliberately omits the standard API response envelope to keep the payload minimal for monitoring tools.
+
+---
+
 ## 🐳 Docker Support
 
 If you prefer containerized development, use the included Docker Compose configuration to spin up external services (PostgreSQL, Redis, MinIO):
