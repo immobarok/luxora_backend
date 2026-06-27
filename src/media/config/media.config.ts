@@ -27,24 +27,13 @@ const toCsvList = (value: unknown): string[] => {
 
 export class MediaConfig {
   @IsString()
-  MINIO_ENDPOINT!: string;
-
-  @IsNumber()
-  @Transform(({ value }: { value: unknown }) => toNumber(value, 9000))
-  MINIO_PORT: number = 9000;
-
-  @IsBoolean()
-  @Transform(({ value }: { value: unknown }) => toBoolean(value, false))
-  MINIO_USE_SSL: boolean = false;
+  CLOUDINARY_CLOUD_NAME!: string;
 
   @IsString()
-  MINIO_ACCESS_KEY!: string;
+  CLOUDINARY_API_KEY!: string;
 
   @IsString()
-  MINIO_SECRET_KEY!: string;
-
-  @IsString()
-  MINIO_BUCKET!: string;
+  CLOUDINARY_API_SECRET!: string;
 
   @IsNumber()
   @Transform(({ value }: { value: unknown }) =>
@@ -91,12 +80,9 @@ export const validateMediaConfig = (
 
 export default registerAs('media', () => {
   return validateMediaConfig({
-    MINIO_ENDPOINT: process.env.MINIO_ENDPOINT,
-    MINIO_PORT: process.env.MINIO_PORT,
-    MINIO_USE_SSL: process.env.MINIO_USE_SSL === 'true',
-    MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY,
-    MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY,
-    MINIO_BUCKET: process.env.MINIO_BUCKET,
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
     MAX_FILE_SIZE: process.env.MAX_FILE_SIZE,
     ALLOWED_IMAGE_TYPES: process.env.ALLOWED_IMAGE_TYPES,
     ALLOWED_VIDEO_TYPES: process.env.ALLOWED_VIDEO_TYPES,
