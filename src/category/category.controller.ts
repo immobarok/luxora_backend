@@ -22,8 +22,8 @@ import { Roles, Role } from '../common/decorators/roles.decorator';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Public } from 'src/common/decorators';
-import { MediaService } from 'src/media/media.service';
-import type { UploadedFile as UploadedFileType } from 'src/media/types/uploaded-file.type';
+import { MediaService } from '../media/media.service';
+import type { UploadedFile as UploadedFileType } from '../media/types/uploaded-file.type';
 
 interface AuthenticatedRequest extends Request {
   user: {
