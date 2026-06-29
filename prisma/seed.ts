@@ -38,7 +38,7 @@ async function main() {
 
   const superAdmin = await prisma.user.upsert({
     where: { email: superAdminEmail },
-    update: {},
+    update: { passwordHash: superAdminHash },
     create: {
       email: superAdminEmail,
       passwordHash: superAdminHash,
@@ -56,7 +56,7 @@ async function main() {
   // Create Admin
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {}, // Don't update if exists
+    update: { passwordHash: adminHash }, // Update password if exists
     create: {
       email: adminEmail,
       passwordHash: adminHash,

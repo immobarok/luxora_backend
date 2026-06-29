@@ -1,0 +1,2729 @@
+{
+  "info": {
+    "name": "Luxora API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Address",
+      "item": [
+        {
+          "name": "GET /)\r\n  async getUserAddresses(@Req() req: RequestWithUser) {\r\n    return this.addressService.getUserAddresses(req.user.id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/addresses/)\r\n  async getUserAddresses(@Req() req: RequestWithUser) {\r\n    return this.addressService.getUserAddresses(req.user.id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "addresses",
+                ")\r\n  async getUserAddresses(@Req() req: RequestWithUser) {\r\n    return this.addressService.getUserAddresses(req.user.id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/addresses/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "addresses",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "App",
+      "item": [
+        {
+          "name": "GET /)\r\n  getHello(): string {\r\n    return this.appService.getHello();\r\n  }\r\n\r\n  @Public()\r\n  @SkipTransform(",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/)\r\n  getHello(): string {\r\n    return this.appService.getHello();\r\n  }\r\n\r\n  @Public()\r\n  @SkipTransform(",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                ")\r\n  getHello(): string {\r\n    return this.appService.getHello();\r\n  }\r\n\r\n  @Public()\r\n  @SkipTransform("
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /verify-email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-email"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /forgot-password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /reset-password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brand",
+      "item": [
+        {
+          "name": "POST /)\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/brands/)\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "brands",
+                ")\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /)\r\n  @Public(",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/brands/)\r\n  @Public(",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "brands",
+                ")\r\n  @Public("
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/brands/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "brands",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /slug/:slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/brands/slug/:slug",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "brands",
+                "slug",
+                ":slug"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/brands/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "brands",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /:id/verify",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/brands/:id/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "brands",
+                ":id",
+                "verify"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/brands/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "brands",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "GET /)\r\n  @UseGuards(JwtAuthGuard)\r\n  async getCart(@Req() req: RequestWithUser) {\r\n    return this.cartService.getCart(req.user.id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/)\r\n  @UseGuards(JwtAuthGuard)\r\n  async getCart(@Req() req: RequestWithUser) {\r\n    return this.cartService.getCart(req.user.id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                ")\r\n  @UseGuards(JwtAuthGuard)\r\n  async getCart(@Req() req: RequestWithUser) {\r\n    return this.cartService.getCart(req.user.id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /guest",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/guest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "guest"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "items"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /guest/items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/guest/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "guest",
+                "items"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /items/:itemId",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/items/:itemId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "items",
+                ":itemId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /items/:itemId",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/items/:itemId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "items",
+                ":itemId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /guest/items/:itemId",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/guest/items/:itemId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "guest",
+                "items",
+                ":itemId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /guest/items/:itemId",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/guest/items/:itemId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "guest",
+                "items",
+                ":itemId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /)\r\n  @UseGuards(JwtAuthGuard)\r\n  async clearCart(@Req() req: RequestWithUser) {\r\n    return this.cartService.clearCart(req.user.id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/)\r\n  @UseGuards(JwtAuthGuard)\r\n  async clearCart(@Req() req: RequestWithUser) {\r\n    return this.cartService.clearCart(req.user.id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                ")\r\n  @UseGuards(JwtAuthGuard)\r\n  async clearCart(@Req() req: RequestWithUser) {\r\n    return this.cartService.clearCart(req.user.id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/coupon",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "coupon"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /coupon",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/coupon",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "coupon"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /guest/coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/guest/coupon",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "guest",
+                "coupon"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /guest/coupon",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/guest/coupon",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "guest",
+                "coupon"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /merge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/merge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "merge"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Category",
+      "item": [
+        {
+          "name": "POST /)\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/)\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                ")\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /)\r\n  @Public()\r\n  async findAll() {\r\n    return this.categoryService.findAll(",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/)\r\n  @Public()\r\n  async findAll() {\r\n    return this.categoryService.findAll(",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                ")\r\n  @Public()\r\n  async findAll() {\r\n    return this.categoryService.findAll("
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /slug/:slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/slug/:slug",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "slug",
+                ":slug"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "GET /rooms",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "rooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /rooms",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "rooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /rooms/:roomId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms/:roomId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "rooms",
+                ":roomId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /rooms/:roomId/messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms/:roomId/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "rooms",
+                ":roomId",
+                "messages"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /rooms/:roomId/messages",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms/:roomId/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "rooms",
+                ":roomId",
+                "messages"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /rooms/:roomId/read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms/:roomId/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "rooms",
+                ":roomId",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /rooms/:roomId/assign",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms/:roomId/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "rooms",
+                ":roomId",
+                "assign"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /rooms/:roomId/close",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms/:roomId/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "rooms",
+                ":roomId",
+                "close"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupon",
+      "item": [
+        {
+          "name": "GET /)\r\n  async listCoupons() {\r\n    return this.couponService.listCoupons();\r\n  }\r\n\r\n  @Post()\r\n  async createCoupon(\r\n    @Body() dto: CreateCouponDto,\r\n    @Req() req: RequestWithUser,\r\n  ) {\r\n    return this.couponService.createCoupon(req.user.id, dto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/coupons/)\r\n  async listCoupons() {\r\n    return this.couponService.listCoupons();\r\n  }\r\n\r\n  @Post()\r\n  async createCoupon(\r\n    @Body() dto: CreateCouponDto,\r\n    @Req() req: RequestWithUser,\r\n  ) {\r\n    return this.couponService.createCoupon(req.user.id, dto",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "coupons",
+                ")\r\n  async listCoupons() {\r\n    return this.couponService.listCoupons();\r\n  }\r\n\r\n  @Post()\r\n  async createCoupon(\r\n    @Body() dto: CreateCouponDto,\r\n    @Req() req: RequestWithUser,\r\n  ) {\r\n    return this.couponService.createCoupon(req.user.id, dto"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/coupons/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "coupons",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /:id/toggle",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/coupons/:id/toggle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "coupons",
+                ":id",
+                "toggle"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PublicCoupon",
+      "item": [
+        {
+          "name": "POST /apply",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/coupons/apply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "coupons",
+                "apply"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "GET /top-selling-products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/top-selling-products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "top-selling-products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /product-sales",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/product-sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "product-sales"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /orders-cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/orders-cards",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "orders-cards"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "overview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "customers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /customers/stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/customers/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "customers",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /customers/export",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/customers/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "customers",
+                "export"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /customers/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/customers/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "customers",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /customers/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/customers/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "customers",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Media",
+      "item": [
+        {
+          "name": "POST /upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "upload"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /upload-multiple",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/upload-multiple",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "upload-multiple"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET ",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /bulk/delete",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/bulk/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "bulk",
+                "delete"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Order",
+      "item": [
+        {
+          "name": "POST /)\r\n  @UseGuards(JwtAuthGuard)\r\n  async createOrder(@Req() req: RequestWithUser, @Body() dto: CreateOrderDto) {\r\n    return this.orderService.createOrderFromCart(req.user.id, dto);\r\n  }\r\n\r\n  // Checkout (create order + payment) (step 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/)\r\n  @UseGuards(JwtAuthGuard)\r\n  async createOrder(@Req() req: RequestWithUser, @Body() dto: CreateOrderDto) {\r\n    return this.orderService.createOrderFromCart(req.user.id, dto);\r\n  }\r\n\r\n  / Checkout (create order + payment) (step 2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                ")\r\n  @UseGuards(JwtAuthGuard)\r\n  async createOrder(@Req() req: RequestWithUser, @Body() dto: CreateOrderDto) {\r\n    return this.orderService.createOrderFromCart(req.user.id, dto);\r\n  }\r\n\r\n  ",
+                " Checkout (create order + payment) (step 2"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "checkout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /checkout/validate",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/checkout/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "checkout",
+                "validate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /my-orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/my-orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "my-orders"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /:id/cancel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                ":id",
+                "cancel"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/all",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/admin/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "admin",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/admin/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "admin",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "admin",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /:id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/:id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                ":id",
+                "status"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminCartSettings",
+      "item": [
+        {
+          "name": "GET /)\r\n  async getSettings() {\r\n    return this.settingsService.getSettingsWithMetadata();\r\n  }\r\n\r\n  @Patch()\r\n  async updateSettings(\r\n    @Body() dto: UpdateCartSettingsDto,\r\n    @Req() req: RequestWithUser,\r\n  ) {\r\n    const updated = await this.settingsService.updateSettings(\r\n      {\r\n        TAX_RATE: dto.taxRate,\r\n        FREE_SHIPPING_THRESHOLD: dto.freeShippingThreshold,\r\n        SHIPPING_COST: dto.shippingCost,\r\n      },\r\n      req.user.id,\r\n    ",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/cart-settings/)\r\n  async getSettings() {\r\n    return this.settingsService.getSettingsWithMetadata();\r\n  }\r\n\r\n  @Patch()\r\n  async updateSettings(\r\n    @Body() dto: UpdateCartSettingsDto,\r\n    @Req() req: RequestWithUser,\r\n  ) {\r\n    const updated = await this.settingsService.updateSettings(\r\n      {\r\n        TAX_RATE: dto.taxRate,\r\n        FREE_SHIPPING_THRESHOLD: dto.freeShippingThreshold,\r\n        SHIPPING_COST: dto.shippingCost,\r\n      },\r\n      req.user.id,\r\n    ",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cart-settings",
+                ")\r\n  async getSettings() {\r\n    return this.settingsService.getSettingsWithMetadata();\r\n  }\r\n\r\n  @Patch()\r\n  async updateSettings(\r\n    @Body() dto: UpdateCartSettingsDto,\r\n    @Req() req: RequestWithUser,\r\n  ) {\r\n    const updated = await this.settingsService.updateSettings(\r\n      {\r\n        TAX_RATE: dto.taxRate,\r\n        FREE_SHIPPING_THRESHOLD: dto.freeShippingThreshold,\r\n        SHIPPING_COST: dto.shippingCost,\r\n      },\r\n      req.user.id,\r\n    "
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product",
+      "item": [
+        {
+          "name": "POST /)\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/)\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ")\r\n  @UseGuards(JwtAuthGuard, RolesGuard)\r\n  @Roles(Role.ADMIN, Role.SUPER_ADMIN"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /)\r\n  @Public(",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/)\r\n  @Public(",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ")\r\n  @Public("
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /featured",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/featured",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "featured"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /new-arrivals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/new-arrivals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "new-arrivals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /slug/:slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/slug/:slug",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "slug",
+                ":slug"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /slug/:slug/related",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/slug/:slug/related",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "slug",
+                ":slug",
+                "related"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /:id/related",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/:id/related",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ":id",
+                "related"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /:id/publish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/:id/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ":id",
+                "publish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /:id/unpublish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/:id/unpublish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ":id",
+                "unpublish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /:id/variants/:variantId/stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/:id/variants/:variantId/stock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ":id",
+                "variants",
+                ":variantId",
+                "stock"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /:id/permanent",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/:id/permanent",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                ":id",
+                "permanent"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stripe",
+      "item": [
+        {
+          "name": "POST /create-payment-intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stripe/create-payment-intent",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stripe",
+                "create-payment-intent"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stripe/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stripe",
+                "webhook"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}
