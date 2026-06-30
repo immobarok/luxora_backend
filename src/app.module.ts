@@ -34,6 +34,7 @@ import { AddressModule } from './address/address.module';
 import { StripeModule } from './stripe/stripe.module';
 import { AboutModule } from './about/about.module';
 import { BannerModule } from './banner/banner.module';
+import { BlogModule } from './blog/blog.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { BannerModule } from './banner/banner.module';
     StripeModule,
     AboutModule,
     BannerModule,
+    BlogModule,
   ],
   controllers: [AppController],
   providers: [

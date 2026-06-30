@@ -1,7 +1,11 @@
 model Blog {
   id          Int      @id @default(autoincrement())
   title       String
+  excerpt     String?  @db.Text
   content     String   @db.Text
+  category    String?
+  coverImage  String?
+  featured    Boolean  @default(false)
   author      String
   readTime    Int
   isPublished Boolean  @default(false)
