@@ -17,8 +17,8 @@ const toBoolean = (value: unknown, fallback: boolean): boolean => {
   return fallback;
 };
 
-const toCsvList = (value: unknown): string[] => {
-  if (typeof value !== 'string') return [];
+const toCsvList = (value: unknown, fallback: string[]): string[] => {
+  if (typeof value !== 'string') return fallback;
   return value
     .split(',')
     .map((item) => item.trim())
@@ -42,18 +42,28 @@ export class MediaConfig {
   MAX_FILE_SIZE: number = 5 * 1024 * 1024; // 5MB default
 
   @IsString({ each: true })
-  @Transform(({ value }: { value: unknown }) => toCsvList(value))
+  @Transform(({ value }: { value: unknown }) => toCsvList(value, [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/avif',
+  ]))
   ALLOWED_IMAGE_TYPES: string[] = [
     'image/jpeg',
     'image/png',
     'image/gif',
     'image/webp',
-    'image/svg+xml',
     'image/avif',
   ];
 
   @IsString({ each: true })
-  @Transform(({ value }: { value: unknown }) => toCsvList(value))
+  @Transform(({ value }: { value: unknown }) => toCsvList(value, [
+    'video/mp4',
+    'video/avi',
+    'video/mov',
+    'video/webm',
+  ]))
   ALLOWED_VIDEO_TYPES: string[] = [
     'video/mp4',
     'video/avi',
