@@ -9,7 +9,10 @@ import {
   Post,
   Request,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import type { Response } from 'express';
 import {
   ForgotPasswordDto,
   RefreshTokenDto,
@@ -72,6 +75,46 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Body() dto: RefreshTokenDto): Promise<AuthTokensEntity> {
     return this.authService.refreshToken(dto);
+  }
+
+  @Public()
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async googleAuth(@Request() req: any) {
+    // Redirects to Google
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthRedirect(@Request() req: any, @Res() res: Response) {
+    const user = await this.authService.validateOAuthLogin(req.user);
+    const tokens = this.authService.login(user);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    return res.redirect(
+      `${frontendUrl}/auth/callback?token=${tokens.access_token}&refresh_token=${tokens.refresh_token}`,
+    );
+  }
+
+  @Public()
+  @Get('facebook')
+  @UseGuards(AuthGuard('facebook'))
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async facebookAuth(@Request() req: any) {
+    // Redirects to Facebook
+  }
+
+  @Public()
+  @Get('facebook/callback')
+  @UseGuards(AuthGuard('facebook'))
+  async facebookAuthRedirect(@Request() req: any, @Res() res: Response) {
+    const user = await this.authService.validateOAuthLogin(req.user);
+    const tokens = this.authService.login(user);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    return res.redirect(
+      `${frontendUrl}/auth/callback?token=${tokens.access_token}&refresh_token=${tokens.refresh_token}`,
+    );
   }
 
   @Get('me')

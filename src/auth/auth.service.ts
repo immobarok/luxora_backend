@@ -92,12 +92,11 @@ export class AuthService {
     pass: string,
   ): Promise<AuthenticatedUser | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) {
+    if (!user || !user.passwordHash) {
       return null;
     }
 
     if (await compare(pass, user.passwordHash)) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { passwordHash, ...result } = user;
       return result;
     }
@@ -209,6 +208,50 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
+  }
+
+  async validateOAuthLogin(profile: any): Promise<AuthenticatedUser> {
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: profile.email },
+          profile.provider === 'google'
+            ? { googleId: profile.providerId }
+            : { facebookId: profile.providerId },
+        ],
+      },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email: profile.email,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          avatarUrl: profile.avatarUrl,
+          googleId: profile.provider === 'google' ? profile.providerId : null,
+          facebookId: profile.provider === 'facebook' ? profile.providerId : null,
+          isEmailVerified: true,
+          emailVerifiedAt: new Date(),
+          role: Role.CUSTOMER,
+        },
+      });
+    } else {
+      if (profile.provider === 'google' && !user.googleId) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { googleId: profile.providerId },
+        });
+      } else if (profile.provider === 'facebook' && !user.facebookId) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { facebookId: profile.providerId },
+        });
+      }
+    }
+
+    const { passwordHash, ...result } = user;
+    return result;
   }
 
   private generateOtp(): string {
