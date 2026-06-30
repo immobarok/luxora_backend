@@ -35,6 +35,7 @@ import { StripeModule } from './stripe/stripe.module';
 import { AboutModule } from './about/about.module';
 import { BannerModule } from './banner/banner.module';
 import { BlogModule } from './blog/blog.module';
+import { CustomerModule } from './customer/customer.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { BlogModule } from './blog/blog.module';
     AboutModule,
     BannerModule,
     BlogModule,
+    CustomerModule,
   ],
   controllers: [AppController],
   providers: [
