@@ -32,6 +32,7 @@ import { ChatModule } from './chat/chat.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AddressModule } from './address/address.module';
 import { StripeModule } from './stripe/stripe.module';
+import { AboutModule } from './about/about.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { StripeModule } from './stripe/stripe.module';
     DashboardModule,
     AddressModule,
     StripeModule,
+    AboutModule,
   ],
   controllers: [AppController],
   providers: [

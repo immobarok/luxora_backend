@@ -18,8 +18,8 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryHierarchy")
+  parent   Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[]        @relation("CategoryHierarchy")
   products ProductCategory[]
 
   @@index([slug])
@@ -46,11 +46,11 @@ model Brand {
 }
 
 model Product {
-  id               String        @id @default(cuid())
-  slug             String        @unique
-  sku              String        @unique
+  id               String  @id @default(cuid())
+  slug             String  @unique
+  sku              String  @unique
   name             String
-  description      String        @db.Text
+  description      String  @db.Text
   shortDescription String?
 
   createdBy String
@@ -79,19 +79,19 @@ model Product {
   isBestSeller Boolean @default(false)
   isSale       Boolean @default(false)
 
-  avgRating   Float   @default(0)
-  reviewCount Int     @default(0)
-  totalSales  Int     @default(0)
+  avgRating   Float @default(0)
+  reviewCount Int   @default(0)
+  totalSales  Int   @default(0)
 
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  creator       User               @relation("CreatedBy", fields: [createdBy], references: [id])
-  brand         Brand?             @relation(fields: [brandId], references: [id])
-  categories    ProductCategory[]
-  media         Media[]            @relation("ProductMedia")
-  
+  creator    User              @relation("CreatedBy", fields: [createdBy], references: [id])
+  brand      Brand?            @relation(fields: [brandId], references: [id])
+  categories ProductCategory[]
+  media      Media[]           @relation("ProductMedia")
+
   variants      ProductVariant[]
   attributes    ProductAttribute[]
   reviews       Review[]
@@ -106,6 +106,7 @@ model Product {
   @@index([createdAt])
   @@map("products")
 }
+
 model ProductCategory {
   productId  String
   categoryId String
@@ -117,7 +118,6 @@ model ProductCategory {
   @@index([categoryId])
   @@map("product_categories")
 }
-
 
 model ProductAttribute {
   id          String @id @default(cuid())

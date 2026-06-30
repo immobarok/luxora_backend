@@ -1,14 +1,14 @@
 // prisma/schema/user.prisma
 
 model User {
-  id           String @id @default(cuid())
-  email        String @unique
+  id           String  @id @default(cuid())
+  email        String  @unique
   passwordHash String
   firstName    String
   lastName     String
   phone        String?
   avatarUrl    String?
-  role         Role   @default(CUSTOMER)
+  role         Role    @default(CUSTOMER)
 
   status AccountStatus @default(ACTIVE)
 
@@ -28,19 +28,19 @@ model User {
   lastLoginAt DateTime?
   lastLoginIp String?
 
-  profile        UserProfile?
-  addresses      Address[]
-  orders         Order[]
-  reviews        Review[]
-  cart           Cart?
-  wishlist       Wishlist?
-  notifications  Notification[]
-  products       Product[]     @relation("CreatedBy")
-  coupons        Coupon[]      @relation("CreatedBy")
-  adminActions   AdminAction[] @relation("AdminActions")
-  media          Media[]       @relation("UserMedia")
-  paymentMethods PaymentMethod[]
-  cartSettings   CartSettings[]
+  profile           UserProfile?
+  addresses         Address[]
+  orders            Order[]
+  reviews           Review[]
+  cart              Cart?
+  wishlist          Wishlist?
+  notifications     Notification[]
+  products          Product[]            @relation("CreatedBy")
+  coupons           Coupon[]             @relation("CreatedBy")
+  adminActions      AdminAction[]        @relation("AdminActions")
+  media             Media[]              @relation("UserMedia")
+  paymentMethods    PaymentMethod[]
+  cartSettings      CartSettings[]
   customerChatRooms SupportChatRoom[]    @relation("CustomerChatRooms")
   assignedChatRooms SupportChatRoom[]    @relation("SupportChatRooms")
   chatMessages      SupportChatMessage[] @relation("UserChatMessages")

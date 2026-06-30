@@ -1,0 +1,43 @@
+model AboutPage {
+  id String @id @default(uuid())
+
+  // Hero Section
+  heroTitle    String
+  heroSubtitle String?
+  heroImage    String?
+
+  // Mission Section
+  missionTitle       String
+  missionDescription String
+  missionImage       String?
+
+  // Vision
+  visionTitle       String?
+  visionDescription String?
+
+  // Values Section (JSON array of { title, description, icon })
+  values Json @default("[]")
+
+  // Studio Section
+  studioTitle       String
+  studioDescription String
+  studioImages      Json   @default("[]") // Array of image URLs
+
+  // Stats Section (JSON array of { value, label })
+  stats Json @default("[]")
+
+  // CTA Section
+  ctaTitle      String
+  ctaSubtitle   String?
+  ctaButtonText String
+  ctaButtonLink String
+
+  // SEO Metadata
+  seoTitle       String?
+  seoDescription String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("about_pages")
+}
