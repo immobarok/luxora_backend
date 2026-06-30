@@ -26,6 +26,7 @@ import { MediaService } from '../media/media.service';
 import type { UploadedFile as UploadedFileType } from '../media/types/uploaded-file.type';
 import { ProductService } from './product.service';
 import { ResponseMessage } from 'src/common/interceptors';
+import { JsonBodyInterceptor } from 'src/common/interceptors/json-body.interceptor';
 import { Public } from 'src/common/decorators';
 
 interface AuthenticatedRequest extends Request {
@@ -44,7 +45,7 @@ export class ProductController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FilesInterceptor('files', 10), JsonBodyInterceptor)
   @ResponseMessage('Product created successfully')
   async create(
     @Body() dto: CreateProductDto,
@@ -130,7 +131,7 @@ export class ProductController {
   @ResponseMessage('Product updated successfully')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FilesInterceptor('files', 10), JsonBodyInterceptor)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateProduct,

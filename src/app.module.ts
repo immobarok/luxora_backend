@@ -36,6 +36,7 @@ import { AboutModule } from './about/about.module';
 import { BannerModule } from './banner/banner.module';
 import { BlogModule } from './blog/blog.module';
 import { CustomerModule } from './customer/customer.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { CustomerModule } from './customer/customer.module';
     BannerModule,
     BlogModule,
     CustomerModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [
