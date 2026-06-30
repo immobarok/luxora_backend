@@ -33,6 +33,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AddressModule } from './address/address.module';
 import { StripeModule } from './stripe/stripe.module';
 import { AboutModule } from './about/about.module';
+import { BannerModule } from './banner/banner.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { AboutModule } from './about/about.module';
     AddressModule,
     StripeModule,
     AboutModule,
+    BannerModule,
   ],
   controllers: [AppController],
   providers: [
