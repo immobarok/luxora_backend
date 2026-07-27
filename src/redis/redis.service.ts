@@ -32,4 +32,36 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async exists(key: string): Promise<number> {
     return this.redisClient.exists(key);
   }
+
+  /**
+   * Delete all keys matching a glob pattern using SCAN + DEL.
+   * Uses cursor-based SCAN to avoid blocking the Redis server with KEYS.
+   *
+   * @example await deletePattern('refresh_token:userId:*')
+   */
+  async deletePattern(pattern: string): Promise<void> {
+    let cursor = '0';
+    const pipeline = this.redisClient.pipeline();
+    let hasDeletes = false;
+
+    do {
+      const [nextCursor, keys] = await this.redisClient.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      );
+      cursor = nextCursor;
+
+      if (keys.length > 0) {
+        pipeline.del(...keys);
+        hasDeletes = true;
+      }
+    } while (cursor !== '0');
+
+    if (hasDeletes) {
+      await pipeline.exec();
+    }
+  }
 }

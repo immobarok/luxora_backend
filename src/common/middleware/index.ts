@@ -6,3 +6,5 @@ export * from './correlation-id.middleware';
 export * from './request-logger.middleware';
 export * from './helmet-headers.middleware';
 export * from './json-body-validator.middleware';
+export * from './sanitize.middleware';
+export * from './security-audit.middleware';

@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -13,12 +13,17 @@ import {
 import {
   CorrelationIdMiddleware,
   HelmetHeadersMiddleware,
+  SanitizeMiddleware,
+  SecurityAuditMiddleware,
 } from './common/middleware';
 
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { validateEnv } from './config/env.validation';
 import { AuthModule } from './auth/auth.module';
 import { RedisModule } from './redis/redis.module';
-import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { CustomThrottlerGuard } from './common/guards/throttler.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { MailModule } from './mail/mail.module';
@@ -37,10 +42,36 @@ import { BannerModule } from './banner/banner.module';
 import { BlogModule } from './blog/blog.module';
 import { CustomerModule } from './customer/customer.module';
 import { UserModule } from './user/user.module';
+import Redis from 'ioredis';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // ── Config with env validation ──────────────────────────────────────────
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),
+
+    // ── Rate Limiting (Redis-backed) ────────────────────────────────────────
+    // Global: 100 requests per minute per IP
+    // Auth routes apply stricter @Throttle({ default: { limit: 5, ttl: 60000 } })
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: configService.get<number>('RATE_LIMIT_TTL', 60_000),
+            limit: configService.get<number>('RATE_LIMIT_MAX', 100),
+          },
+        ],
+        storage: new ThrottlerStorageRedisService(
+          new Redis(configService.get<string>('REDIS_URL', '')),
+        ),
+      }),
+    }),
+
     PrismaModule,
     AuthModule,
     RedisModule,
@@ -64,10 +95,12 @@ import { UserModule } from './user/user.module';
   controllers: [AppController],
   providers: [
     AppService,
-    // --- Global Guards (JwtAuth first, then Roles) ---
+    // --- Rate Limiting Guard (must be first) ---
+    { provide: APP_GUARD, useClass: CustomThrottlerGuard },
+    // --- Global Guards ---
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
-    // --- Global Interceptors (order matters â€“ first registered = outermost) ---
+    // --- Global Interceptors (order matters – first registered = outermost) ---
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: PerformanceInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
@@ -78,7 +111,16 @@ import { UserModule } from './user/user.module';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(CorrelationIdMiddleware, HelmetHeadersMiddleware)
+      .apply(
+        // Security audit must be first (log raw incoming request)
+        SecurityAuditMiddleware,
+        // Correlation ID for tracing
+        CorrelationIdMiddleware,
+        // Security headers (X-Frame-Options, HSTS, etc.)
+        HelmetHeadersMiddleware,
+        // XSS sanitization of body/query strings
+        SanitizeMiddleware,
+      )
       .forRoutes('*');
   }
 }
