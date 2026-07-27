@@ -47,6 +47,10 @@ import { StripeModule } from './stripe/stripe.module';
 import { UserModule } from './user/user.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { ReviewModule } from './review/review.module';
+import { ReturnsModule } from './returns/returns.module';
+import { ContactModule } from './contact/contact.module';
+import { NotificationModule } from './notification/notification.module';
+import { AdminActionModule } from './admin-action/admin-action.module';
 
 @Module({
   imports: [
@@ -98,6 +102,10 @@ import { ReviewModule } from './review/review.module';
     ProfileModule,
     WishlistModule,
     ReviewModule,
+    ReturnsModule,
+    ContactModule,
+    NotificationModule,
+    AdminActionModule,
   ],
   controllers: [AppController],
   providers: [
