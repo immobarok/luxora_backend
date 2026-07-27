@@ -305,6 +305,7 @@ export class CartService {
           taxTotal: 0,
           shippingTotal: 0,
           grandTotal: 0,
+          freeShippingRemaining: 0,
         },
       };
     }
@@ -394,6 +395,7 @@ export class CartService {
           taxTotal: 0,
           shippingTotal: 0,
           grandTotal: 0,
+          freeShippingRemaining: 0,
         },
       };
     }
@@ -566,6 +568,8 @@ export class CartService {
       totalPrice: item.totalPrice.toNumber(),
       stockAvailable: item.variant.quantity,
       maxQuantity: Math.min(item.variant.quantity, 10),
+      // Flags if the user has more in cart than currently in stock
+      isStockInsufficient: item.quantity > item.variant.quantity,
     }));
 
     const summary: CartSummaryEntity = {
@@ -575,6 +579,10 @@ export class CartService {
       taxTotal: cart.taxTotal.toNumber(),
       shippingTotal: cart.shippingTotal.toNumber(),
       grandTotal: cart.grandTotal.toNumber(),
+      freeShippingRemaining: Math.max(
+        0,
+        settings.FREE_SHIPPING_THRESHOLD - cart.subtotal.toNumber(),
+      ),
     };
 
     const settingsInfo: CartSettingsInfo = {
@@ -651,7 +659,19 @@ export class CartService {
         taxTotal: 0,
         shippingTotal: 0,
         grandTotal: 0,
+        freeShippingRemaining: 0,
       },
     };
+  }
+
+  // Get cart item count (for cart badge — lightweight query)
+  async getCartCount(userId: string): Promise<{ count: number }> {
+    const cart = await this.prisma.cart.findUnique({
+      where: { userId },
+      include: { items: { select: { quantity: true } } },
+    });
+    if (!cart) return { count: 0 };
+    const count = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    return { count };
   }
 }

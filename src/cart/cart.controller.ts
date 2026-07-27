@@ -28,6 +28,12 @@ interface RequestWithUser extends Request {
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
+  @Get('count')
+  @UseGuards(JwtAuthGuard)
+  async getCartCount(@Req() req: RequestWithUser) {
+    return this.cartService.getCartCount(req.user.id);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
   async getCart(@Req() req: RequestWithUser) {

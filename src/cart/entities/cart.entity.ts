@@ -11,6 +11,8 @@ export interface CartItemEntity {
   totalPrice: number;
   stockAvailable: number;
   maxQuantity: number;
+  /** True if the item's current stock is less than the cart quantity */
+  isStockInsufficient: boolean;
 }
 
 export interface CartSummaryEntity {
@@ -20,6 +22,8 @@ export interface CartSummaryEntity {
   taxTotal: number;
   shippingTotal: number;
   grandTotal: number;
+  /** Amount remaining until free shipping threshold is reached (0 if already free) */
+  freeShippingRemaining: number;
 }
 
 export interface CartSettingsInfo {
