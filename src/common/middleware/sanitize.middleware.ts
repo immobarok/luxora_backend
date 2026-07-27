@@ -1,16 +1,12 @@
-import {
-  Injectable,
-  NestMiddleware,
-  BadRequestException,
-} from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
+import { Injectable, NestMiddleware } from '@nestjs/common';
+import { NextFunction, Request, Response } from 'express';
 
 @Injectable()
 export class SanitizeMiddleware implements NestMiddleware {
   private readonly dangerousPatterns = [
     /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
     /javascript:/gi,
-    /on\w+\s*=/gi, // onclick=, onload=, etc.
+    /on\w+\s*=/gi,
     /<iframe[\s\S]*?>/gi,
     /<object[\s\S]*?>/gi,
     /<embed[\s\S]*?>/gi,
@@ -18,9 +14,6 @@ export class SanitizeMiddleware implements NestMiddleware {
     /vbscript:/gi,
   ];
 
-  /**
-   * Sanitize a single string value.
-   */
   private sanitizeString(value: string): string {
     let sanitized = value;
     for (const pattern of this.dangerousPatterns) {
