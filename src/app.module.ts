@@ -51,6 +51,7 @@ import { ReturnsModule } from './returns/returns.module';
 import { ContactModule } from './contact/contact.module';
 import { NotificationModule } from './notification/notification.module';
 import { AdminActionModule } from './admin-action/admin-action.module';
+import { ShipmentModule } from './shipment/shipment.module';
 
 @Module({
   imports: [
@@ -106,6 +107,7 @@ import { AdminActionModule } from './admin-action/admin-action.module';
     ContactModule,
     NotificationModule,
     AdminActionModule,
+    ShipmentModule,
   ],
   controllers: [AppController],
   providers: [
