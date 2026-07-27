@@ -1,7 +1,7 @@
-import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import 'dotenv/config';
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -11,20 +11,16 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('🌱 Starting database seed...');
 
-  // Configuration
   const SALT_ROUNDS = 12;
 
-  // Super Admin
   const superAdminEmail =
     process.env.SEED_SUPER_ADMIN_EMAIL || 'superadmin@luxora.com';
   const superAdminPassword =
     process.env.SEED_SUPER_ADMIN_PASSWORD || 'SuperAdmin@123456';
 
-  // Admin
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@luxora.com';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'Admin@123456';
 
-  // Hash passwords
   let superAdminHash: string;
   let adminHash: string;
 
@@ -53,7 +49,6 @@ async function main() {
 
   console.log(`✅ Super Admin: ${superAdmin.email} (${superAdmin.id})`);
 
-  // Create Admin
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: { passwordHash: adminHash }, // Update password if exists
