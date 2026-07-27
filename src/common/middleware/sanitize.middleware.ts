@@ -5,16 +5,6 @@ import {
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 
-/**
- * SanitizeMiddleware — Recursively strips dangerous HTML/script content
- * from all string fields in request body, query, and params.
- *
- * Protects against:
- * - Reflected XSS via stored user-supplied strings
- * - HTML injection in API responses
- *
- * This is a defence-in-depth measure; Helmet CSP is the primary XSS defence.
- */
 @Injectable()
 export class SanitizeMiddleware implements NestMiddleware {
   private readonly dangerousPatterns = [
@@ -39,12 +29,11 @@ export class SanitizeMiddleware implements NestMiddleware {
     return sanitized.trim();
   }
 
-  /**
-   * Recursively sanitize all string values in an object.
-   */
   private sanitizeObject(obj: unknown, depth = 0): unknown {
-    // Limit recursion depth to prevent DoS via deeply nested objects
     if (depth > 10) return obj;
+
+    if (obj === null || obj === undefined) return obj;
+    if (Buffer.isBuffer(obj)) return obj;
 
     if (typeof obj === 'string') {
       return this.sanitizeString(obj);
@@ -74,10 +63,10 @@ export class SanitizeMiddleware implements NestMiddleware {
       if (req.query && typeof req.query === 'object') {
         req.query = this.sanitizeObject(req.query) as Record<string, string>;
       }
-
-      next();
-    } catch {
-      throw new BadRequestException('Invalid request payload');
+    } catch (err) {
+      console.error('🚨 SanitizeMiddleware Error:', err);
     }
+
+    next();
   }
 }

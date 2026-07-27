@@ -46,7 +46,6 @@ import Redis from 'ioredis';
 
 @Module({
   imports: [
-    // ── Config with env validation ──────────────────────────────────────────
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
