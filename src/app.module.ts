@@ -43,6 +43,7 @@ import { BlogModule } from './blog/blog.module';
 import { CustomerModule } from './customer/customer.module';
 import { UserModule } from './user/user.module';
 import { AnnouncementModule } from './announcement/announcement.module';
+import { ProfileModule } from './profile/profile.module';
 import Redis from 'ioredis';
 
 @Module({
@@ -92,6 +93,7 @@ import Redis from 'ioredis';
     CustomerModule,
     UserModule,
     AnnouncementModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [
