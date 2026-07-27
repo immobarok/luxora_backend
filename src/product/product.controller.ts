@@ -90,6 +90,13 @@ export class ProductController {
     return this.productService.findNewArrivals();
   }
 
+  @Get('best-sellers')
+  @Public()
+  @ResponseMessage('Best sellers retrieved successfully')
+  async findBestSellers() {
+    return this.productService.findBestSellers();
+  }
+
   @Get('slug/:slug')
   @Public()
   @ResponseMessage('Product retrieved successfully')

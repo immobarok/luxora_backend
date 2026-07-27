@@ -251,6 +251,25 @@ export class ProductService {
     return result;
   }
 
+  async findBestSellers() {
+    const cacheKey = 'products:best-sellers:v1';
+    const cached = await this.cacheManager.get<unknown>(cacheKey);
+    if (cached) return cached;
+
+    const bestSellers = await this.prisma.product.findMany({
+      where: {
+        status: { in: STOREFRONT_VISIBLE_STATUSES },
+      },
+      take: 10,
+      orderBy: { totalSales: 'desc' },
+      include: PRODUCT_INCLUDE,
+    });
+
+    const result = bestSellers.map((p) => this.serializeProduct(p));
+    await this.cacheManager.set(cacheKey, result, this.cacheTtlSeconds);
+    return result;
+  }
+
   async findById(id: string, includeDeleted = false) {
     const cacheKey = `product:${id}:${includeDeleted ? 'all' : 'active'}`;
     const cached = await this.cacheManager.get<unknown>(cacheKey);
