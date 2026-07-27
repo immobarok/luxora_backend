@@ -5,20 +5,20 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Role, type User } from '@prisma/client';
 import { compare, genSalt, hash } from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { StringValue } from 'ms';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { MailService } from '../mail/mail.service';
 import {
-  RegisterDto,
-  VerifyEmailDto,
   ForgotPasswordDto,
-  ResetPasswordDto,
   RefreshTokenDto,
+  RegisterDto,
+  ResetPasswordDto,
+  VerifyEmailDto,
 } from './dto';
-import { Role, type User } from '@prisma/client';
 import {
   AuthTokensEntity,
   MessageResponseEntity,
@@ -179,11 +179,7 @@ export class AuthService {
         const exp = payload.exp ?? 0;
         const ttlSeconds = Math.max(exp - Math.floor(Date.now() / 1000), 0);
         if (ttlSeconds > 0) {
-          await this.redis.set(
-            `blacklist:${payload.jti}`,
-            '1',
-            ttlSeconds,
-          );
+          await this.redis.set(`blacklist:${payload.jti}`, '1', ttlSeconds);
         }
         // Remove the refresh token from Redis
         await this.redis.del(`refresh_token:${payload.sub}:${payload.jti}`);
@@ -194,18 +190,10 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Check if a JWT is blacklisted (called by JwtStrategy)
-  // ──────────────────────────────────────────────────────────────────────────
-
   async isTokenBlacklisted(jti: string): Promise<boolean> {
     const val = await this.redis.get(`blacklist:${jti}`);
     return val !== null;
   }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Email Verification
-  // ──────────────────────────────────────────────────────────────────────────
 
   async verifyEmail(dto: VerifyEmailDto): Promise<MessageResponseEntity> {
     const storedOtp = await this.redis.get(`verify_email:${dto.email}`);
@@ -213,18 +201,24 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired OTP');
     }
 
-    await this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { email: dto.email },
       data: { isEmailVerified: true, emailVerifiedAt: new Date() },
     });
 
     await this.redis.del(`verify_email:${dto.email}`);
+
+    // Fire-and-forget: send welcome email now that email is confirmed
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || dto.email.split('@')[0];
+    this.mail.sendWelcomeEmail(user.email, fullName).catch((err) => {
+      this.logger.error(
+        `Failed to send welcome email to ${user.email}`,
+        err.stack,
+      );
+    });
+
     return { message: 'Email verified successfully' };
   }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Forgot Password
-  // ──────────────────────────────────────────────────────────────────────────
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<MessageResponseEntity> {
     const user = await this.prisma.user.findUnique({
@@ -392,16 +386,10 @@ export class AuthService {
     return value * (multipliers[unit] ?? 1);
   }
 
-  /**
-   * Revoke all active refresh tokens for a user (used after password reset).
-   * Pattern-based deletion via Redis scan.
-   */
   private async revokeAllUserTokens(email: string): Promise<void> {
     try {
       const user = await this.prisma.user.findUnique({ where: { email } });
       if (!user) return;
-      // Note: This requires Redis SCAN support — ioredis supports it natively
-      // Deletes all `refresh_token:<userId>:*` keys
       const pattern = `refresh_token:${user.id}:*`;
       await this.redis.deletePattern(pattern);
     } catch (err) {

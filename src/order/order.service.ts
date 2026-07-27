@@ -2,6 +2,7 @@
 
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import {
   Shipment,
 } from '@prisma/client';
 import { CartService } from '../cart/cart.service';
+import { MailService } from '../mail/mail.service';
 import { CreateOrderDto, OrderQueryDto, OrderStatus } from './dto';
 import { OrderEntity } from './entities/order.entity';
 
@@ -52,9 +54,12 @@ type AdminOrderQuery = OrderQueryDto & {
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cartService: CartService,
+    private readonly mail: MailService,
   ) {}
 
   // Create order from cart
@@ -158,7 +163,77 @@ export class OrderService {
       return newOrder;
     });
 
-    return this.mapOrderToEntity(order);
+    const orderEntity = this.mapOrderToEntity(order);
+
+    // Fire-and-forget: send order confirmation email without blocking the response
+    this.sendOrderConfirmationEmail(userId, orderEntity).catch(() => {
+      // Error is already logged inside sendOrderConfirmationEmail
+    });
+
+    return orderEntity;
+  }
+
+  /**
+   * Send the order confirmation email after a successful order creation.
+   * Fetches user name for personalisation; runs fire-and-forget.
+   */
+  private async sendOrderConfirmationEmail(
+    userId: string,
+    orderEntity: OrderEntity,
+  ): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, firstName: true, lastName: true },
+      });
+      if (!user) return;
+
+      const fullName =
+        [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+        user.email.split('@')[0];
+
+      await this.mail.sendOrderConfirmation(
+        user.email,
+        orderEntity.orderNumber,
+        fullName,
+        orderEntity.id,
+        {
+          items: orderEntity.items.map((item) => ({
+            productName: item.productName,
+            variantName: item.variantName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            imageUrl: item.imageUrl,
+          })),
+          subtotal: orderEntity.subtotal,
+          taxTotal: orderEntity.taxTotal,
+          shippingTotal: orderEntity.shippingTotal,
+          discountTotal: orderEntity.discountTotal,
+          grandTotal: orderEntity.grandTotal,
+          currency: orderEntity.currency,
+          couponCode: orderEntity.couponCode,
+          placedAt: orderEntity.placedAt,
+          shippingAddress: orderEntity.shippingAddress
+            ? {
+                name: orderEntity.shippingAddress.name,
+                phone: orderEntity.shippingAddress.phone,
+                addressLine1: orderEntity.shippingAddress.addressLine1,
+                addressLine2: orderEntity.shippingAddress.addressLine2,
+                city: orderEntity.shippingAddress.city,
+                state: orderEntity.shippingAddress.state,
+                postalCode: orderEntity.shippingAddress.postalCode,
+                country: orderEntity.shippingAddress.country,
+              }
+            : null,
+        },
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to send order confirmation email for order ${orderEntity.orderNumber}`,
+        err,
+      );
+    }
   }
 
   // Get order by ID

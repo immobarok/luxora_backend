@@ -45,203 +45,997 @@ type TemplateRenderer = (context: Record<string, unknown>) => {
   text: string;
 };
 
-function getContextString(
-  context: Record<string, unknown>,
-  key: string,
-  fallback = '',
-): string {
-  const value = context[key];
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : fallback;
-  }
-
-  if (
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    typeof value === 'bigint'
-  ) {
-    return String(value);
-  }
-
+function str(ctx: Record<string, unknown>, key: string, fallback = ''): string {
+  const v = ctx[key];
+  if (typeof v === 'string') return v.trim() || fallback;
+  if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint')
+    return String(v);
   return fallback;
 }
 
-function getContextNumber(
-  context: Record<string, unknown>,
+function num(
+  ctx: Record<string, unknown>,
   key: string,
   fallback: number,
 ): number {
-  const value = context[key];
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
+  const v = ctx[key];
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const p = Number(v);
+    if (Number.isFinite(p)) return p;
   }
-
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
   return fallback;
 }
 
-function formatAddress(address: Mail.Address): string {
+function formatCurrency(amount: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+function formatAddress(ctx: Record<string, unknown>): string {
+  const addr = ctx['shippingAddress'] as Record<string, string> | undefined;
+  if (!addr) return '';
+  const parts = [
+    addr['name'],
+    addr['addressLine1'],
+    addr['addressLine2'],
+    `${addr['city']}, ${addr['state']} ${addr['postalCode']}`,
+    addr['country'],
+    addr['phone'],
+  ].filter(Boolean);
+  return parts.join('<br>');
+}
+
+function formatAddressText(ctx: Record<string, unknown>): string {
+  const addr = ctx['shippingAddress'] as Record<string, string> | undefined;
+  if (!addr) return '';
+  const parts = [
+    addr['name'],
+    addr['addressLine1'],
+    addr['addressLine2'],
+    `${addr['city']}, ${addr['state']} ${addr['postalCode']}`,
+    addr['country'],
+  ].filter(Boolean);
+  return parts.join(', ');
+}
+
+// ── Shared CSS tokens ──────────────────────────────────────────────────────
+const BASE_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background-color: #f1f5f9;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #1e293b;
+    -webkit-text-size-adjust: 100%;
+  }
+  .email-wrapper {
+    background-color: #f1f5f9;
+    padding: 40px 20px;
+  }
+  .email-card {
+    background: #ffffff;
+    border-radius: 16px;
+    max-width: 600px;
+    margin: 0 auto;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -1px rgba(0,0,0,.04);
+  }
+  /* Header */
+  .email-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 36px 40px 32px;
+    text-align: center;
+  }
+  .brand-name {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .brand-tagline {
+    font-size: 11px;
+    color: #94a3b8;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  /* Body */
+  .email-body {
+    padding: 40px 40px 36px;
+  }
+  .greeting {
+    font-size: 22px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 12px;
+  }
+  .paragraph {
+    font-size: 15px;
+    color: #475569;
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 28px 0;
+  }
+  /* Footer */
+  .email-footer {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 24px 40px;
+    text-align: center;
+  }
+  .footer-text {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+  .footer-links a {
+    color: #64748b;
+    text-decoration: none;
+    font-size: 12px;
+    margin: 0 8px;
+  }
+`;
+
+// ── OTP Box shared component ───────────────────────────────────────────────
+const OTP_BOX_CSS = `
+  .otp-container {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    margin: 28px 0;
+  }
+  .otp-label {
+    font-size: 11px;
+    color: #94a3b8;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .otp-digits {
+    display: inline-block;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: 12px;
+    color: #f8fafc;
+    font-family: 'Courier New', monospace;
+    background: rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 12px 24px;
+  }
+  .otp-expiry {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 12px;
+  }
+  .otp-expiry span { color: #f59e0b; font-weight: 600; }
+`;
+
+// ── CTA Button ─────────────────────────────────────────────────────────────
+const BTN_CSS = `
+  .cta-wrapper { text-align: center; margin: 28px 0; }
+  .cta-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+    color: #f8fafc !important;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 14px 32px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+  }
+`;
+
+// ── Alert / Notice block ───────────────────────────────────────────────────
+const ALERT_CSS = `
+  .alert {
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 20px 0;
+  }
+  .alert-warning {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    color: #78350f;
+  }
+  .alert-danger {
+    background: #fef2f2;
+    border-left: 4px solid #ef4444;
+    color: #7f1d1d;
+  }
+  .alert-success {
+    background: #f0fdf4;
+    border-left: 4px solid #22c55e;
+    color: #14532d;
+  }
+`;
+
+// ============================================================
+// 1. WELCOME EMAIL
+// ============================================================
+function welcomeTemplate(ctx: Record<string, unknown>): { html: string; text: string } {
+  const name = str(ctx, 'name', 'there');
+  const shopUrl = str(ctx, 'shopUrl', 'https://luxora.com');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Welcome to Luxora</title>
+  <style>
+    ${BASE_CSS}
+    ${BTN_CSS}
+    .hero-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .features-grid {
+      display: table;
+      width: 100%;
+      margin: 24px 0;
+    }
+    .feature-row { display: table-row; }
+    .feature-cell {
+      display: table-cell;
+      width: 33.33%;
+      padding: 0 8px;
+      text-align: center;
+      vertical-align: top;
+    }
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .feature-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .feature-desc {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div class="email-wrapper">
+  <div class="email-card">
+
+    <!-- Header -->
+    <div class="email-header">
+      <div class="brand-name">Luxora</div>
+      <div class="brand-tagline">Premium Lifestyle &amp; Fashion</div>
+    </div>
+
+    <!-- Body -->
+    <div class="email-body">
+      <div class="hero-icon">✨</div>
+      <h1 class="greeting">Welcome, ${name}!</h1>
+      <p class="paragraph">
+        We're absolutely thrilled to have you as part of the Luxora family.
+        Your account has been created and verified — you're all set to explore
+        our curated collection of premium products.
+      </p>
+
+      <hr class="divider">
+
+      <!-- Features -->
+      <div class="features-grid">
+        <div class="feature-row">
+          <div class="feature-cell">
+            <div class="feature-icon">🛍️</div>
+            <div class="feature-title">Shop Premium</div>
+            <div class="feature-desc">Discover thousands of curated luxury items</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-icon">🚚</div>
+            <div class="feature-title">Fast Delivery</div>
+            <div class="feature-desc">Swift and secure delivery to your doorstep</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-title">Safe &amp; Secure</div>
+            <div class="feature-desc">End-to-end encrypted payments</div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <p class="paragraph">
+        Ready to start your luxury journey? Click below to explore our latest collections.
+      </p>
+
+      <div class="cta-wrapper">
+        <a href="${shopUrl}" class="cta-btn">Explore Luxora →</a>
+      </div>
+
+      <p class="paragraph" style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
+        If you have any questions, our support team is always here to help.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="email-footer">
+      <div class="footer-links" style="margin-bottom: 10px;">
+        <a href="${shopUrl}">Shop</a>
+        <a href="${shopUrl}/orders">My Orders</a>
+        <a href="${shopUrl}/support">Support</a>
+      </div>
+      <p class="footer-text">
+        © ${new Date().getFullYear()} Luxora. All rights reserved.<br>
+        You're receiving this email because you just created a Luxora account.<br>
+        This is an automated email — please do not reply directly.
+      </p>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>`;
+
+  const text = `Welcome to Luxora, ${name}!
+
+We're thrilled to have you as part of the Luxora family. Your account has been created and verified — you're all set.
+
+✨ What you can do now:
+- Shop premium curated products
+- Track your orders in real time
+- Enjoy fast and secure delivery
+
+Start shopping: ${shopUrl}
+
+Thank you for choosing Luxora.
+© ${new Date().getFullYear()} Luxora. All rights reserved.`;
+
+  return { html, text };
+}
+
+// ============================================================
+// 2. EMAIL VERIFICATION OTP
+// ============================================================
+function verificationOtpTemplate(ctx: Record<string, unknown>): { html: string; text: string } {
+  const name = str(ctx, 'name', 'there');
+  const otp = str(ctx, 'otp', '------');
+  const expiry = num(ctx, 'expiryMinutes', 5);
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Verify Your Email — Luxora</title>
+  <style>
+    ${BASE_CSS}
+    ${OTP_BOX_CSS}
+    ${ALERT_CSS}
+    .steps { margin: 24px 0; }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-text {
+      font-size: 14px;
+      color: #475569;
+      padding-top: 4px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div class="email-wrapper">
+  <div class="email-card">
+
+    <!-- Header -->
+    <div class="email-header">
+      <div class="brand-name">Luxora</div>
+      <div class="brand-tagline">Premium Lifestyle &amp; Fashion</div>
+    </div>
+
+    <!-- Body -->
+    <div class="email-body">
+      <h1 class="greeting">Verify Your Email</h1>
+      <p class="paragraph">
+        Hello <strong>${name}</strong>, welcome to Luxora! To complete your registration
+        and secure your account, please use the one-time verification code below.
+      </p>
+
+      <!-- OTP Box -->
+      <div class="otp-container">
+        <div class="otp-label">Your Verification Code</div>
+        <div class="otp-digits">${otp}</div>
+        <div class="otp-expiry">Expires in <span>${expiry} minutes</span></div>
+      </div>
+
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Go back to the Luxora verification page.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Enter the 6-digit code shown above exactly as it appears.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Your account will be instantly activated — enjoy shopping!</div>
+        </div>
+      </div>
+
+      <!-- Warning -->
+      <div class="alert alert-warning">
+        <strong>⚠️ Security Notice:</strong> This code is valid for <strong>${expiry} minutes</strong>
+        only and can be used once. Never share this code with anyone —
+        Luxora staff will never ask for your verification code.
+      </div>
+
+      <p class="paragraph" style="font-size: 13px; color: #94a3b8;">
+        Didn't create a Luxora account? You can safely ignore this email.
+        No action is needed on your part.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="email-footer">
+      <p class="footer-text">
+        © ${new Date().getFullYear()} Luxora. All rights reserved.<br>
+        This is an automated security email — please do not reply.
+      </p>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>`;
+
+  const text = `Luxora — Verify Your Email
+
+Hello ${name},
+
+Your email verification code is:
+
+  ${otp}
+
+This code expires in ${expiry} minutes and can only be used once.
+
+Steps to verify:
+1. Return to the Luxora verification page
+2. Enter the 6-digit code above
+3. Your account will be instantly activated
+
+Security Notice: Never share this code with anyone. Luxora staff will never ask for it.
+
+Didn't create a Luxora account? Ignore this email — no action is needed.
+
+© ${new Date().getFullYear()} Luxora. All rights reserved.`;
+
+  return { html, text };
+}
+
+// ============================================================
+// 3. PASSWORD RESET OTP
+// ============================================================
+function passwordResetOtpTemplate(ctx: Record<string, unknown>): { html: string; text: string } {
+  const name = str(ctx, 'name', 'there');
+  const otp = str(ctx, 'otp', '------');
+  const expiry = num(ctx, 'expiryMinutes', 5);
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Reset Your Password — Luxora</title>
+  <style>
+    ${BASE_CSS}
+    ${OTP_BOX_CSS}
+    ${ALERT_CSS}
+    .otp-container { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); }
+    .otp-expiry span { color: #fbbf24; }
+  </style>
+</head>
+<body>
+<div class="email-wrapper">
+  <div class="email-card">
+
+    <!-- Header -->
+    <div class="email-header">
+      <div class="brand-name">Luxora</div>
+      <div class="brand-tagline">Premium Lifestyle &amp; Fashion</div>
+    </div>
+
+    <!-- Body -->
+    <div class="email-body">
+      <h1 class="greeting">Password Reset Request</h1>
+      <p class="paragraph">
+        Hello <strong>${name}</strong>, we received a request to reset the password
+        for your Luxora account. Use the code below to proceed with resetting your password.
+      </p>
+
+      <!-- OTP Box -->
+      <div class="otp-container">
+        <div class="otp-label">Password Reset Code</div>
+        <div class="otp-digits">${otp}</div>
+        <div class="otp-expiry">Expires in <span>${expiry} minutes</span></div>
+      </div>
+
+      <!-- Danger Notice -->
+      <div class="alert alert-danger">
+        <strong>🔒 Didn't request this?</strong> If you didn't ask to reset your password,
+        your account may be at risk. Please ignore this email and consider changing your
+        password immediately or contact our support team.
+      </div>
+
+      <p class="paragraph" style="font-size: 13px; color: #94a3b8;">
+        For your security, this code will expire in <strong>${expiry} minutes</strong>.
+        Luxora staff will never ask you for your reset code — keep it private.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="email-footer">
+      <p class="footer-text">
+        © ${new Date().getFullYear()} Luxora. All rights reserved.<br>
+        This is an automated security email — please do not reply.
+      </p>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>`;
+
+  const text = `Luxora — Password Reset
+
+Hello ${name},
+
+Your password reset code is:
+
+  ${otp}
+
+This code expires in ${expiry} minutes.
+
+If you didn't request a password reset, please ignore this email.
+For account security concerns, contact support immediately.
+
+© ${new Date().getFullYear()} Luxora. All rights reserved.`;
+
+  return { html, text };
+}
+
+// ============================================================
+// 4. ORDER CONFIRMATION
+// ============================================================
+function orderConfirmationTemplate(ctx: Record<string, unknown>): { html: string; text: string } {
+  const name = str(ctx, 'name', 'Valued Customer');
+  const orderNumber = str(ctx, 'orderNumber', 'N/A');
+  const orderId = str(ctx, 'orderId', '');
+  const trackUrl = str(ctx, 'trackUrl', '');
+  const currency = str(ctx, 'currency', 'USD');
+
+  const subtotal = num(ctx, 'subtotal', 0);
+  const taxTotal = num(ctx, 'taxTotal', 0);
+  const shippingTotal = num(ctx, 'shippingTotal', 0);
+  const discountTotal = num(ctx, 'discountTotal', 0);
+  const grandTotal = num(ctx, 'grandTotal', 0);
+  const placedAt = str(ctx, 'placedAt', new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+  const couponCode = str(ctx, 'couponCode', '');
+
+  // Build order items rows
+  const rawItems = ctx['items'];
+  let itemRows = '';
+  let itemsText = '';
+  if (Array.isArray(rawItems) && rawItems.length > 0) {
+    for (const item of rawItems as Record<string, unknown>[]) {
+      const itemName = str(item, 'productName', 'Product');
+      const variant = str(item, 'variantName', '');
+      const qty = num(item, 'quantity', 1);
+      const unitPrice = num(item, 'unitPrice', 0);
+      const totalPrice = num(item, 'totalPrice', 0);
+      const imageUrl = str(item, 'imageUrl', '');
+
+      itemRows += `
+        <tr>
+          <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+            <table cellpadding="0" cellspacing="0" border="0" style="width:100%">
+              <tr>
+                ${imageUrl ? `
+                <td style="width: 64px; vertical-align: top; padding-right: 16px;">
+                  <img src="${imageUrl}" alt="${itemName}" width="64" height="64"
+                    style="width:64px;height:64px;border-radius:8px;object-fit:cover;display:block;">
+                </td>` : ''}
+                <td style="vertical-align: top;">
+                  <div style="font-size:14px;font-weight:600;color:#1e293b;">${itemName}</div>
+                  ${variant ? `<div style="font-size:12px;color:#64748b;margin-top:2px;">${variant}</div>` : ''}
+                  <div style="font-size:13px;color:#64748b;margin-top:4px;">Qty: ${qty} × ${formatCurrency(unitPrice, currency)}</div>
+                </td>
+                <td style="vertical-align: top; text-align: right; white-space: nowrap;">
+                  <div style="font-size:14px;font-weight:600;color:#1e293b;">${formatCurrency(totalPrice, currency)}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`;
+      itemsText += `  - ${itemName}${variant ? ` (${variant})` : ''}: ${qty} × ${formatCurrency(unitPrice, currency)} = ${formatCurrency(totalPrice, currency)}\n`;
+    }
+  }
+
+  const shippingAddrHtml = formatAddress(ctx);
+  const shippingAddrText = formatAddressText(ctx);
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Order Confirmed — Luxora #${orderNumber}</title>
+  <style>
+    ${BASE_CSS}
+    ${BTN_CSS}
+    ${ALERT_CSS}
+    .order-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    .order-meta {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .order-meta-grid {
+      display: table;
+      width: 100%;
+    }
+    .order-meta-row { display: table-row; }
+    .order-meta-cell {
+      display: table-cell;
+      width: 50%;
+      padding: 6px 0;
+      vertical-align: top;
+    }
+    .meta-label {
+      font-size: 11px;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    .meta-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .items-table { width: 100%; border-collapse: collapse; }
+    .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .summary-row td { padding: 8px 0; font-size: 14px; color: #475569; }
+    .summary-row.total td { padding-top: 14px; border-top: 2px solid #1e293b; font-size: 16px; font-weight: 700; color: #0f172a; }
+    .summary-row.discount td { color: #22c55e; }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      margin-top: 28px;
+    }
+    .address-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 14px;
+      color: #475569;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+<div class="email-wrapper">
+  <div class="email-card">
+
+    <!-- Header -->
+    <div class="email-header">
+      <div class="brand-name">Luxora</div>
+      <div class="brand-tagline">Premium Lifestyle &amp; Fashion</div>
+    </div>
+
+    <!-- Body -->
+    <div class="email-body">
+      <div class="order-badge">✓ Order Confirmed</div>
+      <h1 class="greeting">Thank you, ${name}!</h1>
+      <p class="paragraph">
+        Your order has been placed and confirmed. We're already preparing your items
+        for dispatch. You'll receive another update once your order ships.
+      </p>
+
+      <!-- Order Meta -->
+      <div class="order-meta">
+        <div class="order-meta-grid">
+          <div class="order-meta-row">
+            <div class="order-meta-cell">
+              <div class="meta-label">Order Number</div>
+              <div class="meta-value">#${orderNumber}</div>
+            </div>
+            <div class="order-meta-cell">
+              <div class="meta-label">Order Date</div>
+              <div class="meta-value">${placedAt}</div>
+            </div>
+          </div>
+          ${orderId ? `
+          <div class="order-meta-row">
+            <div class="order-meta-cell" colspan="2" style="padding-top: 14px;">
+              <div class="meta-label">Order ID</div>
+              <div class="meta-value" style="font-size:12px;word-break:break-all;">${orderId}</div>
+            </div>
+          </div>` : ''}
+        </div>
+      </div>
+
+      ${trackUrl ? `
+      <div class="cta-wrapper">
+        <a href="${trackUrl}" class="cta-btn">Track My Order →</a>
+      </div>` : ''}
+
+      <hr class="divider">
+
+      <!-- Items -->
+      ${itemRows ? `
+      <div class="section-title">Order Items</div>
+      <table class="items-table">
+        <tbody>${itemRows}</tbody>
+      </table>` : ''}
+
+      <!-- Summary -->
+      <table class="summary-table">
+        <tbody>
+          <tr class="summary-row">
+            <td>Subtotal</td>
+            <td style="text-align:right">${formatCurrency(subtotal, currency)}</td>
+          </tr>
+          ${discountTotal > 0 ? `
+          <tr class="summary-row discount">
+            <td>Discount${couponCode ? ` (${couponCode})` : ''}</td>
+            <td style="text-align:right">−${formatCurrency(discountTotal, currency)}</td>
+          </tr>` : ''}
+          <tr class="summary-row">
+            <td>Shipping</td>
+            <td style="text-align:right">${shippingTotal === 0 ? '<span style="color:#22c55e;font-weight:600;">FREE</span>' : formatCurrency(shippingTotal, currency)}</td>
+          </tr>
+          <tr class="summary-row">
+            <td>Tax</td>
+            <td style="text-align:right">${formatCurrency(taxTotal, currency)}</td>
+          </tr>
+          <tr class="summary-row total">
+            <td>Total</td>
+            <td style="text-align:right">${formatCurrency(grandTotal, currency)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Shipping Address -->
+      ${shippingAddrHtml ? `
+      <div class="section-title">Shipping Address</div>
+      <div class="address-box">${shippingAddrHtml}</div>` : ''}
+
+      <hr class="divider">
+
+      <!-- Success Notice -->
+      <div class="alert alert-success">
+        <strong>📦 What's next?</strong> Our team is processing your order.
+        You'll receive an email with your tracking number once it ships — usually within 1–2 business days.
+      </div>
+
+      <p class="paragraph" style="font-size: 13px; color: #94a3b8; margin-top: 20px;">
+        Need help with your order? Reply to this email or visit our
+        <a href="#" style="color: #64748b;">Help Center</a>.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="email-footer">
+      <p class="footer-text">
+        © ${new Date().getFullYear()} Luxora. All rights reserved.<br>
+        You received this email because you placed an order at Luxora.<br>
+        This is a transactional email — please do not reply directly.
+      </p>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>`;
+
+  const text = `Luxora — Order Confirmed ✓
+
+Thank you, ${name}! Your order has been placed successfully.
+
+ORDER DETAILS
+─────────────
+Order Number: #${orderNumber}
+${orderId ? `Order ID:     ${orderId}\n` : ''}Order Date:   ${placedAt}
+${trackUrl ? `Track Order:  ${trackUrl}\n` : ''}
+
+ITEMS ORDERED
+─────────────
+${itemsText || 'See order details in your account.\n'}
+
+ORDER SUMMARY
+─────────────
+Subtotal:   ${formatCurrency(subtotal, currency)}
+${discountTotal > 0 ? `Discount:   -${formatCurrency(discountTotal, currency)}\n` : ''}Shipping:   ${shippingTotal === 0 ? 'FREE' : formatCurrency(shippingTotal, currency)}
+Tax:        ${formatCurrency(taxTotal, currency)}
+Total:      ${formatCurrency(grandTotal, currency)}
+
+${shippingAddrText ? `SHIPPING TO\n───────────\n${shippingAddrText}\n\n` : ''}
+What's next? Our team is processing your order and will send you a tracking number once it ships.
+
+Questions? Contact our support team.
+
+© ${new Date().getFullYear()} Luxora. All rights reserved.`;
+
+  return { html, text };
+}
+
+// ============================================================
+// 5. PASSWORD CHANGED NOTIFICATION
+// ============================================================
+function passwordChangedTemplate(ctx: Record<string, unknown>): { html: string; text: string } {
+  const name = str(ctx, 'name', 'there');
+  const changedAt = new Date().toLocaleString('en-US', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  });
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Password Changed — Luxora</title>
+  <style>
+    ${BASE_CSS}
+    ${ALERT_CSS}
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      text-align: center;
+      line-height: 64px;
+      font-size: 28px;
+    }
+  </style>
+</head>
+<body>
+<div class="email-wrapper">
+  <div class="email-card">
+    <div class="email-header">
+      <div class="brand-name">Luxora</div>
+      <div class="brand-tagline">Premium Lifestyle &amp; Fashion</div>
+    </div>
+    <div class="email-body">
+      <div class="success-icon">🔐</div>
+      <h1 class="greeting">Password Changed</h1>
+      <p class="paragraph">
+        Hello <strong>${name}</strong>, this email confirms that your Luxora account
+        password was successfully changed on <strong>${changedAt}</strong>.
+      </p>
+      <div class="alert alert-danger">
+        <strong>⚠️ Wasn't you?</strong> If you did not change your password,
+        your account may be compromised. Please contact our support team immediately
+        and reset your password from another trusted device.
+      </div>
+      <p class="paragraph" style="font-size:13px;color:#94a3b8;">
+        For your security, you may be logged out of all active sessions.
+        Please log in again with your new password.
+      </p>
+    </div>
+    <div class="email-footer">
+      <p class="footer-text">
+        © ${new Date().getFullYear()} Luxora. All rights reserved.<br>
+        This is an automated security notification — please do not reply.
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
+
+  const text = `Luxora — Password Changed
+
+Hello ${name},
+
+Your Luxora account password was successfully changed on ${changedAt}.
+
+If you did NOT make this change, your account may be compromised.
+Please contact support immediately and reset your password.
+
+© ${new Date().getFullYear()} Luxora. All rights reserved.`;
+
+  return { html, text };
+}
+
+// ============================================================
+// Template Registry Map
+// ============================================================
+const templates: Record<EmailTemplate, TemplateRenderer> = {
+  [EmailTemplate.WELCOME]: welcomeTemplate,
+  [EmailTemplate.VERIFICATION_OTP]: verificationOtpTemplate,
+  [EmailTemplate.PASSWORD_RESET_OTP]: passwordResetOtpTemplate,
+  [EmailTemplate.ORDER_CONFIRMATION]: orderConfirmationTemplate,
+  [EmailTemplate.PASSWORD_CHANGED]: passwordChangedTemplate,
+};
+
+function formatAddressField(address: Mail.Address): string {
   return address.address;
 }
 
 function formatRecipients(recipients: Mail.Options['to']): string {
-  if (!recipients) {
-    return 'unknown';
-  }
-
-  if (typeof recipients === 'string') {
-    return recipients;
-  }
-
-  if (Array.isArray(recipients)) {
+  if (!recipients) return 'unknown';
+  if (typeof recipients === 'string') return recipients;
+  if (Array.isArray(recipients))
     return recipients
-      .map((recipient) =>
-        typeof recipient === 'string' ? recipient : formatAddress(recipient),
-      )
+      .map((r) => (typeof r === 'string' ? r : formatAddressField(r)))
       .join(', ');
-  }
-
-  return formatAddress(recipients);
+  return formatAddressField(recipients);
 }
 
-const templates: Record<EmailTemplate, TemplateRenderer> = {
-  [EmailTemplate.VERIFICATION_OTP]: (ctx) => ({
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verify Your Email</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-          .container { background: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 24px; font-weight: bold; color: #000; }
-          .otp-code { background: #f5f5f5; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0; }
-          .otp-code .code { font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #000; font-family: monospace; }
-          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; text-align: center; }
-          .button { display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 4px; margin-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">Luxora</div>
-          </div>
-          <h2>Verify Your Email</h2>
-          <p>Hello ${getContextString(ctx, 'name', 'there')},</p>
-          <p>Use the verification code below to complete your email verification:</p>
-          <div class="otp-code">
-            <div class="code">${getContextString(ctx, 'otp', '')}</div>
-          </div>
-          <p>This code will expire in <strong>${getContextNumber(ctx, 'expiryMinutes', 5)} minutes</strong>.</p>
-          <p>If you didn't request this code, you can safely ignore this email.</p>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} Luxora. All rights reserved.</p>
-            <p>This is an automated email, please do not reply.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-    text: `Luxora - Verify Your Email\n\nHello ${getContextString(ctx, 'name', 'there')},\n\nYour verification code is: ${getContextString(ctx, 'otp', '')}\n\nThis code will expire in ${getContextNumber(ctx, 'expiryMinutes', 5)} minutes.\n\nIf you didn't request this code, you can safely ignore this email.\n\n© ${new Date().getFullYear()} Luxora!`,
-  }),
-
-  [EmailTemplate.PASSWORD_RESET_OTP]: (ctx) => ({
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Reset Your Password</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-          .container { background: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-          .header { text-align: center; margin-bottom: 30px; }
-          .logo { font-size: 24px; font-weight: bold; color: #000; }
-          .otp-code { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0; }
-          .otp-code .code { font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #856404; font-family: monospace; }
-          .warning { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 4px; margin: 20px 0; }
-          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; text-align: center; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">Luxora</div>
-          </div>
-          <h2>Reset Your Password</h2>
-          <p>Hello ${getContextString(ctx, 'name', 'there')},</p>
-          <p>We received a request to reset your password. Use the code below to proceed:</p>
-          <div class="otp-code">
-            <div class="code">${getContextString(ctx, 'otp', '')}</div>
-          </div>
-          <p>This code will expire in <strong>${getContextNumber(ctx, 'expiryMinutes', 5)} minutes</strong>.</p>
-          <div class="warning">
-            <strong>Didn't request this?</strong> If you didn't request a password reset, please ignore this email or contact support if you're concerned.
-          </div>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} Luxora. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-    text: `Luxora - Reset Your Password\n\nHello ${getContextString(ctx, 'name', 'there')},\n\nYour password reset code is: ${getContextString(ctx, 'otp', '')}\n\nThis code will expire in ${getContextNumber(ctx, 'expiryMinutes', 5)} minutes.\n\nDidn't request this? Please ignore this email or contact support.\n\n© ${new Date().getFullYear()} Luxora!`,
-  }),
-
-  [EmailTemplate.WELCOME]: (ctx) => ({
-    html: `<!DOCTYPE html><html><body><h1>Welcome to Luxora!, ${getContextString(ctx, 'name', 'there')}!</h1></body></html>`,
-    text: `Welcome to Luxora!, ${getContextString(ctx, 'name', 'there')}!`,
-  }),
-
-  [EmailTemplate.ORDER_CONFIRMATION]: (ctx) => ({
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Order Confirmation</title>
-      </head>
-      <body style="font-family: Arial, sans-serif; color: #222; line-height: 1.5;">
-        <h2>Order Confirmed</h2>
-        <p>Hello ${getContextString(ctx, 'name', 'there')},</p>
-        <p>Your order has been placed successfully.</p>
-        <p><strong>Order Number:</strong> ${getContextString(ctx, 'orderNumber', 'N/A')}</p>
-        <p><strong>Order ID:</strong> ${getContextString(ctx, 'orderId', 'N/A')}</p>
-        <p>You can use your Order Number/Order ID to track your order status.</p>
-        ${getContextString(ctx, 'trackUrl') ? `<p><a href="${getContextString(ctx, 'trackUrl')}">Track your order</a></p>` : ''}
-        <p>Thank you for shopping with Luxora.</p>
-      </body>
-      </html>
-    `,
-    text:
-      `Order Confirmed\n\n` +
-      `Hello ${getContextString(ctx, 'name', 'there')},\n\n` +
-      `Your order has been placed successfully.\n` +
-      `Order Number: ${getContextString(ctx, 'orderNumber', 'N/A')}\n` +
-      `Order ID: ${getContextString(ctx, 'orderId', 'N/A')}\n` +
-      `${getContextString(ctx, 'trackUrl') ? `Track your order: ${getContextString(ctx, 'trackUrl')}\n` : ''}\n` +
-      `Thank you for shopping with Luxora.`,
-  }),
-
-  [EmailTemplate.PASSWORD_CHANGED]: () => ({
-    html: `<!DOCTYPE html><html><body><h1>Password Changed Successfully</h1><p>If you didn't make this change, contact support immediately.</p></body></html>`,
-    text: `Password Changed Successfully. If you didn't make this change, contact support immediately.`,
-  }),
-};
+// ============================================================
+// Mail Service
+// ============================================================
 
 @Injectable()
 export class MailService implements OnModuleInit {
@@ -280,28 +1074,22 @@ export class MailService implements OnModuleInit {
       rateLimit: 5,
     };
 
-    // If using port 587, we must NOT use implicit TLS (secure: true)
-    // We use requireTLS to ensure it upgrades to STARTTLS
     if (!secure && port === 587) {
       (config as any).requireTLS = true;
       (config as any).tls = { rejectUnauthorized: false };
     }
 
     this.transporter = nodemailer.createTransport(config);
-
-    this.transporter.on('idle', () => {
-      this.logger.debug('SMTP connection idle');
-    });
-
-    this.transporter.on('error', (err) => {
-      this.logger.error('SMTP connection error', err);
-    });
+    this.transporter.on('idle', () => this.logger.debug('SMTP connection idle'));
+    this.transporter.on('error', (err) =>
+      this.logger.error('SMTP connection error', err),
+    );
   }
 
   private async verifyConnection(): Promise<void> {
     try {
       await this.transporter.verify();
-      this.logger.log('SMTP connection established successfully');
+      this.logger.log('✉️  SMTP connection established successfully');
     } catch (error) {
       this.logger.error('Failed to establish SMTP connection', error);
       throw error;
@@ -312,18 +1100,16 @@ export class MailService implements OnModuleInit {
     const { to, subject, template, context, attachments, cc, bcc } = options;
 
     const templateRenderer = templates[template];
-    if (!templateRenderer) {
-      throw new Error(`Template "${template}" not found`);
-    }
+    if (!templateRenderer) throw new Error(`Template "${template}" not found`);
 
     const { html, text } = templateRenderer(context);
 
     const mailOptions: Mail.Options = {
-      from: this.configService.getOrThrow<string>('MAIL_FROM'),
+      from: `"Luxora" <${this.configService.getOrThrow<string>('MAIL_FROM')}>`,
       to,
       cc,
       bcc,
-      subject: `[Luxora] ${subject}`,
+      subject,
       text,
       html,
       attachments,
@@ -338,7 +1124,7 @@ export class MailService implements OnModuleInit {
   ): Promise<void> {
     try {
       await this.transporter.sendMail(mailOptions);
-      this.logger.log(`Email sent to ${formatRecipients(mailOptions.to)}`);
+      this.logger.log(`✉️  Email sent to ${formatRecipients(mailOptions.to)}`);
     } catch (error) {
       this.logger.warn(
         `Email send failed (attempt ${attempt}/${this.maxRetries})`,
@@ -381,7 +1167,7 @@ export class MailService implements OnModuleInit {
   ): Promise<void> {
     await this.sendEmail({
       to: email,
-      subject: 'Verify Your Email Address',
+      subject: 'Verify Your Email Address — Luxora',
       template: EmailTemplate.VERIFICATION_OTP,
       context: {
         name: name || email.split('@')[0],
@@ -398,7 +1184,7 @@ export class MailService implements OnModuleInit {
   ): Promise<void> {
     await this.sendEmail({
       to: email,
-      subject: 'Reset Your Password',
+      subject: 'Reset Your Password — Luxora',
       template: EmailTemplate.PASSWORD_RESET_OTP,
       context: {
         name: name || email.split('@')[0],
@@ -409,11 +1195,13 @@ export class MailService implements OnModuleInit {
   }
 
   async sendWelcomeEmail(email: string, name: string): Promise<void> {
+    const shopUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'https://luxora.com';
     await this.sendEmail({
       to: email,
-      subject: 'Welcome to Luxora!',
+      subject: 'Welcome to Luxora — Your Premium Fashion Destination',
       template: EmailTemplate.WELCOME,
-      context: { name },
+      context: { name, shopUrl },
     });
   }
 
@@ -422,17 +1210,72 @@ export class MailService implements OnModuleInit {
     orderNumber: string,
     name: string,
     orderId: string,
+    orderDetails?: {
+      items?: Array<{
+        productName: string;
+        variantName?: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+        imageUrl?: string | null;
+      }>;
+      subtotal?: number;
+      taxTotal?: number;
+      shippingTotal?: number;
+      discountTotal?: number;
+      grandTotal?: number;
+      currency?: string;
+      couponCode?: string | null;
+      placedAt?: Date;
+      shippingAddress?: {
+        name?: string;
+        phone?: string;
+        addressLine1?: string;
+        addressLine2?: string | null;
+        city?: string;
+        state?: string;
+        postalCode?: string;
+        country?: string;
+      } | null;
+    },
   ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL')?.trim();
     const trackUrl = frontendUrl
       ? `${frontendUrl.replace(/\/$/, '')}/orders/track?orderId=${encodeURIComponent(orderId)}`
       : undefined;
 
+    const placedDate = orderDetails?.placedAt
+      ? new Date(orderDetails.placedAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+
     await this.sendEmail({
       to: email,
-      subject: `Order Confirmation: #${orderNumber}`,
+      subject: `Order Confirmed — #${orderNumber} | Luxora`,
       template: EmailTemplate.ORDER_CONFIRMATION,
-      context: { orderNumber, orderId, name, trackUrl },
+      context: {
+        name,
+        orderNumber,
+        orderId,
+        trackUrl,
+        currency: orderDetails?.currency ?? 'USD',
+        subtotal: orderDetails?.subtotal ?? 0,
+        taxTotal: orderDetails?.taxTotal ?? 0,
+        shippingTotal: orderDetails?.shippingTotal ?? 0,
+        discountTotal: orderDetails?.discountTotal ?? 0,
+        grandTotal: orderDetails?.grandTotal ?? 0,
+        couponCode: orderDetails?.couponCode ?? '',
+        placedAt: placedDate,
+        items: orderDetails?.items ?? [],
+        shippingAddress: orderDetails?.shippingAddress ?? null,
+      },
     });
   }
 
@@ -442,7 +1285,7 @@ export class MailService implements OnModuleInit {
   ): Promise<void> {
     await this.sendEmail({
       to: email,
-      subject: 'Your Password Was Changed',
+      subject: 'Your Luxora Password Was Changed',
       template: EmailTemplate.PASSWORD_CHANGED,
       context: { name },
     });
