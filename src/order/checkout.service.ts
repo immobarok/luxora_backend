@@ -82,13 +82,20 @@ export class CheckoutService {
       dto.paymentMethod,
     );
 
-    // Update order if payment successful
+    // Update order if payment successful or COD
     if (payment.status === 'CAPTURED') {
       await this.orderService.updateOrderStatus(
         order.id,
         'PAYMENT_CONFIRMED',
         'system',
         'Payment completed',
+      );
+    } else if (dto.paymentMethod === PaymentMethodType.COD) {
+      await this.orderService.updateOrderStatus(
+        order.id,
+        'PROCESSING',
+        'system',
+        'COD Order placed',
       );
     }
 
@@ -100,8 +107,11 @@ export class CheckoutService {
       await this.cartService.clearCart(userId);
     }
 
-    // Send order confirmation email only after successful payment capture.
-    if (payment.status === PaymentStatus.CAPTURED) {
+    // Send order confirmation email only after successful payment capture or COD
+    if (
+      payment.status === PaymentStatus.CAPTURED ||
+      dto.paymentMethod === PaymentMethodType.COD
+    ) {
       const customer = await this.prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -155,11 +165,11 @@ export class CheckoutService {
         orderId,
         amount,
         currency: 'USD',
-        status: isCod ? 'CAPTURED' : 'PENDING',
+        status: 'PENDING', // COD is pending until delivery, Stripe is pending until webhook
         method,
         provider: isCod ? 'cod' : 'stripe',
         providerTxnId: isCod ? undefined : `txn_${Date.now()}`,
-        processedAt: isCod ? new Date() : undefined,
+        processedAt: undefined,
       },
     });
 

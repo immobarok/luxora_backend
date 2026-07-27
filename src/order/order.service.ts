@@ -422,9 +422,14 @@ export class OrderService {
     if (status === 'DELIVERED') updateData.deliveredAt = new Date();
     if (status === 'CANCELLED') updateData.cancelledAt = new Date();
 
-    // Update payment status if paid
-    if (status === 'PAYMENT_CONFIRMED') {
+    // Update payment status if paid or delivered (for COD)
+    if (status === 'PAYMENT_CONFIRMED' || status === 'DELIVERED') {
       updateData.paymentStatus = 'CAPTURED';
+      // Also update the related payment record if needed (in a real system)
+      await this.prisma.payment.updateMany({
+        where: { orderId, status: 'PENDING' },
+        data: { status: 'CAPTURED', processedAt: new Date() },
+      });
     }
 
     const updated = await this.prisma.order.update({
@@ -675,7 +680,7 @@ export class OrderService {
     currentStatus: PrismaOrderStatus,
   ): PrismaOrderStatus[] {
     const transitions: Record<PrismaOrderStatus, PrismaOrderStatus[]> = {
-      PENDING_PAYMENT: ['PAYMENT_CONFIRMED', 'CANCELLED'],
+      PENDING_PAYMENT: ['PAYMENT_CONFIRMED', 'PROCESSING', 'CANCELLED'],
       PAYMENT_CONFIRMED: ['PROCESSING', 'CANCELLED', 'REFUNDED'],
       PROCESSING: ['SHIPPED', 'CANCELLED'],
       SHIPPED: ['DELIVERED', 'CANCELLED'],

@@ -38,8 +38,8 @@ export class CheckoutDto {
   paymentMethod!: PaymentMethodType;
 
   @IsString()
-  @IsNotEmpty()
-  paymentToken!: string; // Stripe token, etc.
+  @IsOptional()
+  paymentToken?: string;
 
   @IsString()
   @IsOptional()
