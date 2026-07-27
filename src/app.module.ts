@@ -46,6 +46,7 @@ import { RedisModule } from './redis/redis.module';
 import { StripeModule } from './stripe/stripe.module';
 import { UserModule } from './user/user.module';
 import { WishlistModule } from './wishlist/wishlist.module';
+import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
@@ -96,6 +97,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
     AnnouncementModule,
     ProfileModule,
     WishlistModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [
