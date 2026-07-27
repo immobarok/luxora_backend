@@ -6,6 +6,7 @@ import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import hpp from 'hpp';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   // ── Create Application ─────────────────────────────────────────────
@@ -150,6 +151,18 @@ async function bootstrap() {
   const redisIoAdapter = new RedisIoAdapter(app);
   await redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);
+
+  // ── Swagger API Documentation ────────────────────────────────────────
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Luxora API')
+      .setDescription('The robust backend API for Luxora E-commerce platform.')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   // ── Start Server ───────────────────────────────────────────────────
   const port = configService.get<number>('PORT', 3000);
