@@ -17,6 +17,7 @@ import { CartService } from './cart.service';
 import { AddToCartDto, ApplyCouponDto, UpdateCartItemDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
+import { SkipTransform } from '../common/interceptors';
 import { Request } from 'express';
 import * as uuid from 'uuid';
 
@@ -49,18 +50,34 @@ export class CartController {
 
   @Post('items')
   @UseGuards(JwtAuthGuard)
+  @SkipTransform()
   async addToCart(@Req() req: RequestWithUser, @Body() dto: AddToCartDto) {
-    return this.cartService.addToCart(req.user.id, dto);
+    const cart = await this.cartService.addToCart(req.user.id, dto);
+    const item = cart.items.find((entry) => entry.variantId === dto.variantId);
+
+    return {
+      success: true,
+      message: 'Product added to cart successfully',
+      data: { cartId: cart.id, item, summary: cart.summary },
+    };
   }
 
   @Post('guest/items')
   @Public()
+  @SkipTransform()
   async addToGuestCart(
     @Headers('x-session-id') sessionId: string,
     @Body() dto: AddToCartDto,
   ) {
     if (!sessionId) throw new BadRequestException('Session ID required');
-    return this.cartService.addToGuestCart(sessionId, dto);
+    const cart = await this.cartService.addToGuestCart(sessionId, dto);
+    const item = cart.items.find((entry) => entry.variantId === dto.variantId);
+
+    return {
+      success: true,
+      message: 'Product added to cart successfully',
+      data: { cartId: cart.id, item, summary: cart.summary },
+    };
   }
 
   @Patch('items/:itemId')
