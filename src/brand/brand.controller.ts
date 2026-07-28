@@ -74,9 +74,12 @@ export class BrandController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ResponseMessage('Brand deleted successfully')
   async remove(@Param('id') id: string) {
     await this.brandService.remove(id);
+    return {
+      message: 'Brand deleted successfully',
+    };
   }
 }
