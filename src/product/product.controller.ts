@@ -63,10 +63,16 @@ export class ProductController {
       mediaIds = [...mediaIds, ...uploaded.map((m) => m.id)];
     }
 
-    return this.productService.create(adminId, {
+    const product = await this.productService.create(adminId, {
       ...dto,
       mediaIds,
     });
+
+    return {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+    };
   }
 
   @Get()

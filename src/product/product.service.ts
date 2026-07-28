@@ -124,7 +124,7 @@ export class ProductService {
     ]);
 
     const result = {
-      data: products.map((p) => this.serializeProduct(p)),
+      data: products.map((p) => this.serializeProductCard(p)),
       meta: {
         total,
         page,
@@ -1253,6 +1253,29 @@ export class ProductService {
       media,
       attributes,
       variants,
+    };
+  }
+
+  private serializeProductCard(
+    value: Prisma.ProductGetPayload<{ include: typeof PRODUCT_INCLUDE }>,
+  ) {
+    const product = this.serializeProduct(value) as Record<string, any>;
+
+    return {
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      shortDescription: product.shortDescription,
+      gender: product.gender,
+      basePrice: product.basePrice,
+      compareAtPrice: product.compareAtPrice,
+      isSale: product.isSale,
+      isFeatured: product.isFeatured,
+      avgRating: product.avgRating,
+      reviewCount: product.reviewCount,
+      brand: product.brand,
+      categories: product.categories,
+      media: product.media,
     };
   }
 
