@@ -100,7 +100,7 @@ export class ProductService {
   }
 
   async findAll(query: ProductListQueryDto) {
-    const cacheKey = `products:list:${JSON.stringify(query)}`;
+    const cacheKey = `products:list:v2:${JSON.stringify(query)}`;
     const cached = await this.cacheManager.get<unknown>(cacheKey);
     if (cached) return cached;
 
@@ -1259,7 +1259,31 @@ export class ProductService {
   private serializeProductCard(
     value: Prisma.ProductGetPayload<{ include: typeof PRODUCT_INCLUDE }>,
   ) {
-    const product = this.serializeProduct(value) as Record<string, any>;
+    const product = this.serializeProduct(value) as {
+      id: unknown;
+      slug: unknown;
+      name: unknown;
+      shortDescription: unknown;
+      gender: unknown;
+      basePrice: unknown;
+      compareAtPrice: unknown;
+      isSale: unknown;
+      isFeatured: unknown;
+      avgRating: unknown;
+      reviewCount: unknown;
+      brand: unknown;
+      categories: unknown;
+      media: unknown;
+      variants: Array<{
+        id: unknown;
+        size: unknown;
+        price: unknown;
+        salePrice: unknown;
+        stockStatus: unknown;
+        quantity: unknown;
+        options: unknown;
+      }>;
+    };
 
     return {
       id: product.id,
@@ -1276,6 +1300,15 @@ export class ProductService {
       brand: product.brand,
       categories: product.categories,
       media: product.media,
+      variants: product.variants.map((variant) => ({
+        id: variant.id,
+        size: variant.size,
+        price: variant.price,
+        salePrice: variant.salePrice,
+        stockStatus: variant.stockStatus,
+        quantity: variant.quantity,
+        options: variant.options,
+      })),
     };
   }
 
