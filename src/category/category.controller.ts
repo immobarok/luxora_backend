@@ -98,8 +98,11 @@ export class CategoryController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   async remove(@Param('id') id: string) {
     await this.categoryService.remove(id);
+    return {
+      message: 'Category deleted successfully',
+    };
   }
 }
