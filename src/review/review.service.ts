@@ -40,6 +40,11 @@ export class ReviewService {
       return { canReview: false, reason: 'Product not found' };
     }
 
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
     const existingReview = await this.prisma.review.findFirst({
       where: { userId, productId: product.id },
     });
@@ -54,7 +59,10 @@ export class ReviewService {
 
     const deliveredOrder = await this.prisma.order.findFirst({
       where: {
-        userId,
+        OR: [
+          { userId },
+          ...(user?.email ? [{ guestEmail: user.email }] : []),
+        ],
         status: 'DELIVERED',
         items: {
           some: {
