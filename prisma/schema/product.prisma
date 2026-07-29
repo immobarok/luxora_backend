@@ -78,6 +78,8 @@ model Product {
   isNewArrival Boolean @default(false)
   isBestSeller Boolean @default(false)
   isSale       Boolean @default(false)
+  dealStartAt  DateTime?
+  dealEndAt    DateTime?
 
   avgRating   Float @default(0)
   reviewCount Int   @default(0)

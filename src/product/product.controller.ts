@@ -103,6 +103,13 @@ export class ProductController {
     return this.productService.findBestSellers();
   }
 
+  @Get('deals-of-week')
+  @Public()
+  @ResponseMessage('Deals of the week retrieved successfully')
+  async findDealsOfTheWeek() {
+    return this.productService.findDealsOfTheWeek();
+  }
+
   @Get('slug/:slug')
   @Public()
   @ResponseMessage('Product retrieved successfully')

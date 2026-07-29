@@ -50,6 +50,21 @@ export class ProductService {
 
   async create(adminId: string, dto: CreateProductDto) {
     this.logger.log(`Creating product: ${dto.name} by admin ${adminId}`);
+
+    if (dto.compareAtPrice !== undefined && dto.compareAtPrice !== null) {
+      if (dto.compareAtPrice <= dto.basePrice) {
+        throw new BadRequestException(
+          'compareAtPrice must be greater than basePrice',
+        );
+      }
+    }
+
+    if (dto.dealStartAt && dto.dealEndAt) {
+      if (new Date(dto.dealEndAt) <= new Date(dto.dealStartAt)) {
+        throw new BadRequestException('dealEndAt must be after dealStartAt');
+      }
+    }
+
     // Check constraints before generating any unique values
     if (dto.variants?.length) {
       await this.validateVariantSkus(dto.variants);
@@ -270,6 +285,48 @@ export class ProductService {
     return result;
   }
 
+  async findDealsOfTheWeek() {
+    const cacheKey = 'products:deals-of-week:v2';
+    const cached = await this.cacheManager.get<unknown>(cacheKey);
+    if (cached) {
+      const dealItem = cached as Record<string, any>;
+      if (
+        dealItem &&
+        dealItem.dealEndAt &&
+        new Date(dealItem.dealEndAt) < new Date()
+      ) {
+        await this.cacheManager.del(cacheKey);
+      } else {
+        return cached;
+      }
+    }
+
+    const now = new Date();
+    const deal = await this.prisma.product.findFirst({
+      where: {
+        isSale: true,
+        status: { in: STOREFRONT_VISIBLE_STATUSES },
+        dealStartAt: { lte: now },
+        dealEndAt: { gte: now },
+      },
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+      include: PRODUCT_INCLUDE,
+    });
+
+    if (!deal) return null;
+
+    if (
+      deal.compareAtPrice !== null &&
+      Number(deal.compareAtPrice) <= Number(deal.basePrice)
+    ) {
+      return null;
+    }
+
+    const result = this.serializeProduct(deal);
+    await this.cacheManager.set(cacheKey, result, this.cacheTtlSeconds);
+    return result;
+  }
+
   async findById(id: string, includeDeleted = false) {
     const cacheKey = `product:${id}:${includeDeleted ? 'all' : 'active'}`;
     const cached = await this.cacheManager.get<unknown>(cacheKey);
@@ -389,6 +446,48 @@ export class ProductService {
         }>
       | undefined;
 
+    const effectiveBasePrice =
+      dto.basePrice !== undefined ? dto.basePrice : Number(existing.basePrice);
+
+    const effectiveCompareAtPrice =
+      dto.compareAtPrice !== undefined
+        ? dto.compareAtPrice
+        : existing.compareAtPrice !== null &&
+            existing.compareAtPrice !== undefined
+          ? Number(existing.compareAtPrice)
+          : null;
+
+    if (
+      effectiveCompareAtPrice !== null &&
+      effectiveCompareAtPrice !== undefined
+    ) {
+      if (effectiveCompareAtPrice <= effectiveBasePrice) {
+        throw new BadRequestException(
+          'compareAtPrice must be greater than basePrice',
+        );
+      }
+    }
+
+    const effectiveDealStartAt =
+      dto.dealStartAt !== undefined
+        ? dto.dealStartAt
+          ? new Date(dto.dealStartAt)
+          : null
+        : existing.dealStartAt;
+
+    const effectiveDealEndAt =
+      dto.dealEndAt !== undefined
+        ? dto.dealEndAt
+          ? new Date(dto.dealEndAt)
+          : null
+        : existing.dealEndAt;
+
+    if (effectiveDealStartAt && effectiveDealEndAt) {
+      if (effectiveDealEndAt <= effectiveDealStartAt) {
+        throw new BadRequestException('dealEndAt must be after dealStartAt');
+      }
+    }
+
     if (dto.name && dto.name !== existing.name) {
       updateData.name = dto.name;
       updateData.slug = await this.generateUniqueSlug(dto.name);
@@ -398,11 +497,23 @@ export class ProductService {
       updateData.shortDescription = dto.shortDescription;
     }
     if (dto.gender !== undefined) updateData.gender = dto.gender;
-    if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.status !== undefined) {
+      updateData.status = dto.status;
+      if (
+        (dto.status === ProductStatus.ACTIVE ||
+          dto.status === ProductStatus.APPROVED) &&
+        !existing.publishedAt
+      ) {
+        updateData.publishedAt = new Date();
+      }
+    }
     if (dto.basePrice !== undefined) updateData.basePrice = dto.basePrice;
     if (dto.compareAtPrice !== undefined) {
       updateData.compareAtPrice = dto.compareAtPrice;
     }
+    updateData.isSale =
+      effectiveCompareAtPrice !== null &&
+      effectiveCompareAtPrice > effectiveBasePrice;
     if (dto.costPrice !== undefined) updateData.costPrice = dto.costPrice;
     if (dto.trackInventory !== undefined) {
       updateData.trackInventory = dto.trackInventory;
@@ -417,6 +528,14 @@ export class ProductService {
     }
     if (dto.isFreeShipping !== undefined) {
       updateData.isFreeShipping = dto.isFreeShipping;
+    }
+    if (dto.dealStartAt !== undefined) {
+      updateData.dealStartAt = dto.dealStartAt
+        ? new Date(dto.dealStartAt)
+        : null;
+    }
+    if (dto.dealEndAt !== undefined) {
+      updateData.dealEndAt = dto.dealEndAt ? new Date(dto.dealEndAt) : null;
     }
     if (dto.metaTitle !== undefined) updateData.metaTitle = dto.metaTitle;
     if (dto.metaDescription !== undefined) {
@@ -879,6 +998,8 @@ export class ProductService {
       isNewArrival: true,
       isBestSeller: false,
       isSale: dto.compareAtPrice ? dto.basePrice < dto.compareAtPrice : false,
+      dealStartAt: dto.dealStartAt ? new Date(dto.dealStartAt) : null,
+      dealEndAt: dto.dealEndAt ? new Date(dto.dealEndAt) : null,
       avgRating: 0,
       reviewCount: 0,
       totalSales: 0,
@@ -1146,6 +1267,7 @@ export class ProductService {
       'products:featured:v2',
       'products:new-arrivals',
       'products:new-arrivals:v2',
+      'products:deals-of-week:v2',
     ];
     if (id) keys.push(`product:${id}:active`, `product:${id}:all`);
     if (slug) keys.push(`product:slug:${slug}`);
@@ -1235,6 +1357,8 @@ export class ProductService {
       isFeatured: product.isFeatured,
       isNewArrival: product.isNewArrival,
       isSale: product.isSale,
+      dealStartAt: product.dealStartAt,
+      dealEndAt: product.dealEndAt,
       avgRating: product.avgRating,
       reviewCount: product.reviewCount,
       totalSales: product.totalSales,

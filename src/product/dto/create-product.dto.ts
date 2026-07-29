@@ -11,6 +11,7 @@ import {
   Length,
   // Matches,
   IsInt,
+  IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Gender, ProductStatus } from '@prisma/client';
@@ -259,4 +260,12 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   isFeatured?: boolean = false;
+
+  @IsDateString()
+  @IsOptional()
+  dealStartAt?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dealEndAt?: string;
 }
