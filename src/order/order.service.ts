@@ -622,41 +622,109 @@ export class OrderService {
 
   // Get order statistics (Admin)
   async getOrderStats() {
+    const now = new Date();
+    const periodDays = 30;
+    const periodStart = new Date(now);
+    periodStart.setDate(periodStart.getDate() - periodDays);
+    const prevPeriodStart = new Date(periodStart);
+    prevPeriodStart.setDate(prevPeriodStart.getDate() - periodDays);
+
     const [
       totalOrders,
+      prevTotalOrders,
       pendingOrders,
+      prevPendingOrders,
       completedOrders,
+      prevCompletedOrders,
       cancelledOrders,
+      prevCancelledOrders,
       todayRevenue,
       monthRevenue,
     ] = await Promise.all([
       this.prisma.order.count(),
+      this.prisma.order.count({ where: { placedAt: { lt: periodStart } } }),
       this.prisma.order.count({ where: { status: 'PENDING_PAYMENT' } }),
-      this.prisma.order.count({ where: { status: 'DELIVERED' } }),
+      this.prisma.order.count({
+        where: { status: 'PENDING_PAYMENT', placedAt: { lt: periodStart } },
+      }),
+      this.prisma.order.count({
+        where: {
+          status: {
+            in: [
+              'DELIVERED',
+              'PAYMENT_CONFIRMED',
+              'PROCESSING',
+              'PACKED',
+              'SHIPPED',
+              'IN_TRANSIT',
+              'OUT_FOR_DELIVERY',
+            ],
+          },
+        },
+      }),
+      this.prisma.order.count({
+        where: {
+          status: {
+            in: [
+              'DELIVERED',
+              'PAYMENT_CONFIRMED',
+              'PROCESSING',
+              'PACKED',
+              'SHIPPED',
+              'IN_TRANSIT',
+              'OUT_FOR_DELIVERY',
+            ],
+          },
+          placedAt: { lt: periodStart },
+        },
+      }),
       this.prisma.order.count({ where: { status: 'CANCELLED' } }),
+      this.prisma.order.count({
+        where: { status: 'CANCELLED', placedAt: { lt: periodStart } },
+      }),
       this.prisma.order.aggregate({
         where: {
-          status: 'PAYMENT_CONFIRMED',
-          paidAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+          status: { not: 'CANCELLED' },
+          placedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
         },
         _sum: { grandTotal: true },
       }),
       this.prisma.order.aggregate({
         where: {
-          status: 'PAYMENT_CONFIRMED',
-          paidAt: {
-            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          status: { not: 'CANCELLED' },
+          placedAt: {
+            gte: new Date(now.getFullYear(), now.getMonth(), 1),
           },
         },
         _sum: { grandTotal: true },
       }),
     ]);
 
+    const growthPercent = (current: number, previous: number): number => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
     return {
-      totalOrders,
-      pendingOrders,
-      completedOrders,
-      cancelledOrders,
+      periodDays,
+      cards: {
+        totalOrders: {
+          value: totalOrders,
+          growthPercent: growthPercent(totalOrders, prevTotalOrders),
+        },
+        pendingOrders: {
+          value: pendingOrders,
+          growthPercent: growthPercent(pendingOrders, prevPendingOrders),
+        },
+        completedOrders: {
+          value: completedOrders,
+          growthPercent: growthPercent(completedOrders, prevCompletedOrders),
+        },
+        cancelledOrders: {
+          value: cancelledOrders,
+          growthPercent: growthPercent(cancelledOrders, prevCancelledOrders),
+        },
+      },
       todayRevenue: todayRevenue._sum?.grandTotal?.toNumber() || 0,
       monthRevenue: monthRevenue._sum?.grandTotal?.toNumber() || 0,
     };
