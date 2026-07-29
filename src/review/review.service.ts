@@ -59,10 +59,7 @@ export class ReviewService {
 
     const deliveredOrder = await this.prisma.order.findFirst({
       where: {
-        OR: [
-          { userId },
-          ...(user?.email ? [{ guestEmail: user.email }] : []),
-        ],
+        OR: [{ userId }, ...(user?.email ? [{ guestEmail: user.email }] : [])],
         status: 'DELIVERED',
         items: {
           some: {
