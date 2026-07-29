@@ -5,11 +5,14 @@ import { CreateShipmentDto } from './dto/create-shipment.dto';
 import { AddTrackingEventDto } from './dto/add-tracking-event.dto';
 import { OrderStatus, ShippingStatus } from '@prisma/client';
 
+import { MailService } from '../mail/mail.service';
+
 @Injectable()
 export class ShipmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly adminAction: AdminActionService,
+    private readonly mail: MailService,
   ) {}
 
   async createShipment(adminId: string, dto: CreateShipmentDto) {
@@ -98,8 +101,9 @@ export class ShipmentService {
       if (dto.updateShipmentStatus === ShippingStatus.DELIVERED) {
         await this.prisma.order.update({
           where: { id: shipment.orderId },
-          data: { status: OrderStatus.DELIVERED },
+          data: { status: OrderStatus.DELIVERED, deliveredAt: new Date() },
         });
+        this.sendDeliveredReviewEmail(shipment.orderId).catch(() => {});
       }
     }
 
@@ -130,5 +134,48 @@ export class ShipmentService {
     }
 
     return shipments;
+  }
+
+  private async sendDeliveredReviewEmail(orderId: string): Promise<void> {
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          user: { select: { email: true, firstName: true, lastName: true } },
+          shippingAddress: true,
+          items: {
+            include: { variant: true },
+          },
+        },
+      });
+
+      if (!order) return;
+
+      const recipientEmail =
+        order.user?.email ||
+        order.guestEmail;
+      if (!recipientEmail) return;
+
+      const recipientName =
+        [order.user?.firstName, order.user?.lastName].filter(Boolean).join(' ') ||
+        [order.shippingAddress?.firstName, order.shippingAddress?.lastName].filter(Boolean).join(' ') ||
+        'Valued Customer';
+
+      const items = (order.items || []).map((item) => ({
+        productName: item.productName || 'Product',
+        variantName: item.variantName || undefined,
+        imageUrl: item.imageUrl || undefined,
+        productSlugOrId: item.variant?.productId || '',
+      }));
+
+      if (items.length > 0 && this.mail) {
+        await this.mail.sendOrderDeliveredReviewNotification(
+          recipientEmail,
+          order.orderNumber,
+          recipientName,
+          items,
+        );
+      }
+    } catch {}
   }
 }

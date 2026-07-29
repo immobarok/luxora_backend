@@ -1,8 +1,11 @@
 import { IsString, IsOptional, IsUUID, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { AddressInputDto } from './address.dto';
 
 export class CreateOrderDto {
+  @Transform(({ value }) =>
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined,
+  )
   @IsUUID()
   @IsOptional()
   shippingAddressId?: string;
@@ -12,6 +15,9 @@ export class CreateOrderDto {
   @IsOptional()
   shippingAddress?: AddressInputDto;
 
+  @Transform(({ value }) =>
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined,
+  )
   @IsUUID()
   @IsOptional()
   billingAddressId?: string;

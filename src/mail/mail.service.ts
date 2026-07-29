@@ -20,6 +20,7 @@ export enum EmailTemplate {
   WELCOME = 'welcome',
   ORDER_CONFIRMATION = 'order-confirmation',
   PASSWORD_CHANGED = 'password-changed',
+  ORDER_DELIVERED_REVIEW = 'order-delivered-review',
 }
 
 export interface SmtpConfig {
@@ -87,6 +88,27 @@ function formatAddress(ctx: Record<string, unknown>): string {
     addr['phone'],
   ].filter(Boolean);
   return parts.join('<br>');
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function baseTemplate({
+  title,
+  preheader,
+  content,
+}: {
+  title: string;
+  preheader: string;
+  content: string;
+}): string {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title></head><body style="margin:0;background:#fff;font-family:Arial,sans-serif;color:#111;"><div style="max-width:600px;margin:0 auto;padding:32px 24px;"><div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(preheader)}</div>${content}<p style="margin-top:32px;color:#888;font-size:12px;text-align:center;">© ${new Date().getFullYear()} Luxora. All rights reserved.</p></div></body></html>`;
 }
 
 function formatAddressText(ctx: Record<string, unknown>): string {
@@ -1008,6 +1030,76 @@ Please contact support immediately and reset your password.
   return { html, text };
 }
 
+function orderDeliveredReviewTemplate(ctx: Record<string, unknown>): { html: string; text: string } {
+  const name = str(ctx, 'name', 'Valued Customer');
+  const orderNumber = str(ctx, 'orderNumber', '');
+  const items = (ctx.items as any[]) || [];
+
+  const itemsHtml = items
+    .map((item) => {
+      const pName = escapeHtml(item.productName || 'Product');
+      const vName = item.variantName ? escapeHtml(item.variantName) : '';
+      const img = item.imageUrl
+        ? `<img src="${item.imageUrl}" width="50" height="50" style="border-radius: 8px; object-fit: cover; margin-right: 12px;" />`
+        : '';
+      const reviewUrl = item.reviewUrl || '#';
+
+      return `
+        <tr style="border-bottom: 1px solid #f0f0f0;">
+          <td style="padding: 14px 0; vertical-align: middle;">
+            <div style="display: flex; align-items: center;">
+              ${img}
+              <div>
+                <div style="font-weight: 700; font-size: 14px; color: #111111;">${pName}</div>
+                ${vName ? `<div style="font-size: 12px; color: #777777; margin-top: 2px;">${vName}</div>` : ''}
+              </div>
+            </div>
+          </td>
+          <td style="padding: 14px 0; text-align: right; vertical-align: middle;">
+            <a href="${reviewUrl}" style="background-color: #ef4764; color: #ffffff; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block;">
+              Write Review &rarr;
+            </a>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h2 style="font-size: 22px; font-weight: 800; color: #111111; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">
+        Order Delivered! 🎉
+      </h2>
+      <p style="font-size: 14px; color: #555555; margin: 0;">
+        Hi <strong>${escapeHtml(name)}</strong>, your order <strong>#${escapeHtml(orderNumber)}</strong> has been successfully delivered.
+      </p>
+    </div>
+
+    <div style="background-color: #fcfcfc; border: 1px solid #eeeeee; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+      <p style="font-size: 13px; font-weight: 700; text-transform: uppercase; color: #111111; letter-spacing: 1px; margin-top: 0; margin-bottom: 8px;">
+        We'd love your feedback!
+      </p>
+      <p style="font-size: 13px; color: #666666; margin-bottom: 20px; line-height: 1.5;">
+        Please take a moment to leave a review for your purchased products. Click on the button next to each item below to submit your rating and review:
+      </p>
+      <table style="width: 100%; border-collapse: collapse;">
+        ${itemsHtml}
+      </table>
+    </div>
+  `;
+
+  const html = baseTemplate({
+    title: 'Your Order Has Been Delivered — Leave a Review',
+    preheader: `Order #${orderNumber} delivered. Share your review!`,
+    content,
+  });
+
+  const text = `Hi ${name},\n\nYour order #${orderNumber} has been delivered!\n\nPlease leave a review for your items:\n` +
+    items.map((i) => `- ${i.productName}: ${i.reviewUrl}`).join('\n');
+
+  return { html, text };
+}
+
 // ============================================================
 // Template Registry Map
 // ============================================================
@@ -1017,6 +1109,7 @@ const templates: Record<EmailTemplate, TemplateRenderer> = {
   [EmailTemplate.PASSWORD_RESET_OTP]: passwordResetOtpTemplate,
   [EmailTemplate.ORDER_CONFIRMATION]: orderConfirmationTemplate,
   [EmailTemplate.PASSWORD_CHANGED]: passwordChangedTemplate,
+  [EmailTemplate.ORDER_DELIVERED_REVIEW]: orderDeliveredReviewTemplate,
 };
 
 function formatAddressField(address: Mail.Address): string {
@@ -1288,6 +1381,40 @@ export class MailService implements OnModuleInit {
       subject: 'Your Luxora Password Was Changed',
       template: EmailTemplate.PASSWORD_CHANGED,
       context: { name },
+    });
+  }
+
+  async sendOrderDeliveredReviewNotification(
+    email: string,
+    orderNumber: string,
+    name: string,
+    items: Array<{
+      productName: string;
+      variantName?: string;
+      imageUrl?: string | null;
+      productSlugOrId: string;
+    }>,
+  ): Promise<void> {
+    const frontendUrl = (
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'
+    )
+      .trim()
+      .replace(/\/$/, '');
+
+    const formattedItems = items.map((item) => ({
+      ...item,
+      reviewUrl: `${frontendUrl}/product/${encodeURIComponent(item.productSlugOrId)}`,
+    }));
+
+    await this.sendEmail({
+      to: email,
+      subject: `Order Delivered — Leave a Review for Your Items | #${orderNumber}`,
+      template: EmailTemplate.ORDER_DELIVERED_REVIEW,
+      context: {
+        name,
+        orderNumber,
+        items: formattedItems,
+      },
     });
   }
 }

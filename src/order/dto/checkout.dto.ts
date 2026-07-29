@@ -1,5 +1,3 @@
-// src/order/dto/checkout.dto.ts
-
 import {
   IsString,
   IsNotEmpty,
@@ -9,12 +7,15 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaymentMethodType } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { AddressInputDto } from './address.dto';
 
 export { PaymentMethodType as PaymentMethod };
 
 export class CheckoutDto {
+  @Transform(({ value }) =>
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined,
+  )
   @IsUUID()
   @IsOptional()
   shippingAddressId?: string;
@@ -24,6 +25,9 @@ export class CheckoutDto {
   @IsOptional()
   shippingAddress?: AddressInputDto;
 
+  @Transform(({ value }) =>
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined,
+  )
   @IsUUID()
   @IsOptional()
   billingAddressId?: string;

@@ -419,7 +419,12 @@ export class OrderService {
     if (status === 'PAYMENT_CONFIRMED') updateData.paidAt = new Date();
     if (status === 'PROCESSING') updateData.processedAt = new Date();
     if (status === 'SHIPPED') updateData.shippedAt = new Date();
-    if (status === 'DELIVERED') updateData.deliveredAt = new Date();
+    if (status === 'DELIVERED') {
+      updateData.deliveredAt = new Date();
+      this.sendDeliveredReviewEmail(orderId).catch((err) => {
+        this.logger.error(`Failed to trigger review email: ${err?.message}`);
+      });
+    }
     if (status === 'CANCELLED') updateData.cancelledAt = new Date();
 
     // Update payment status if paid or delivered (for COD)
@@ -445,6 +450,55 @@ export class OrderService {
     });
 
     return this.mapOrderToEntity(updated);
+  }
+
+  async sendDeliveredReviewEmail(orderId: string): Promise<void> {
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          user: { select: { email: true, firstName: true, lastName: true } },
+          shippingAddress: true,
+          items: {
+            include: { variant: true },
+          },
+        },
+      });
+
+      if (!order) return;
+
+      const recipientEmail = order.user?.email || order.guestEmail;
+      if (!recipientEmail) return;
+
+      const recipientName =
+        [order.user?.firstName, order.user?.lastName]
+          .filter(Boolean)
+          .join(' ') ||
+        [order.shippingAddress?.firstName, order.shippingAddress?.lastName]
+          .filter(Boolean)
+          .join(' ') ||
+        'Valued Customer';
+
+      const items = (order.items || []).map((item) => ({
+        productName: item.productName || 'Product',
+        variantName: item.variantName || undefined,
+        imageUrl: item.imageUrl || undefined,
+        productSlugOrId: item.variant?.productId || '',
+      }));
+
+      if (items.length > 0) {
+        await this.mail.sendOrderDeliveredReviewNotification(
+          recipientEmail,
+          order.orderNumber,
+          recipientName,
+          items,
+        );
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to send review email for order ${orderId}: ${error?.message}`,
+      );
+    }
   }
 
   // Cancel order
