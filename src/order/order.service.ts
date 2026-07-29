@@ -460,7 +460,13 @@ export class OrderService {
           user: { select: { email: true, firstName: true, lastName: true } },
           shippingAddress: true,
           items: {
-            include: { variant: true },
+            include: {
+              variant: {
+                include: {
+                  product: true,
+                },
+              },
+            },
           },
         },
       });
@@ -483,7 +489,8 @@ export class OrderService {
         productName: item.productName || 'Product',
         variantName: item.variantName || undefined,
         imageUrl: item.imageUrl || undefined,
-        productSlugOrId: item.variant?.productId || '',
+        productSlugOrId:
+          item.variant?.product?.slug || item.variant?.productId || '',
       }));
 
       if (items.length > 0) {

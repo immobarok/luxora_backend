@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminActionService } from '../admin-action/admin-action.service';
 import { CreateShipmentDto } from './dto/create-shipment.dto';
 import { AddTrackingEventDto } from './dto/add-tracking-event.dto';
-import { OrderStatus, ShippingStatus } from '@prisma/client';
+import { OrderStatus, Prisma, ShippingStatus } from '@prisma/client';
 
 import { MailService } from '../mail/mail.service';
 
@@ -25,8 +29,13 @@ export class ShipmentService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status === OrderStatus.CANCELLED || order.status === OrderStatus.REFUNDED) {
-      throw new BadRequestException(`Cannot ship order with status ${order.status}`);
+    if (
+      order.status === OrderStatus.CANCELLED ||
+      order.status === OrderStatus.REFUNDED
+    ) {
+      throw new BadRequestException(
+        `Cannot ship order with status ${order.status}`,
+      );
     }
 
     const shipment = await this.prisma.shipment.create({
@@ -36,9 +45,12 @@ export class ShipmentService {
         method: dto.method,
         trackingNumber: dto.trackingNumber,
         trackingUrl: dto.trackingUrl,
-        items: dto.items as any,
-        shippingAddress: order.shippingAddress as any,
-        estimatedDelivery: dto.estimatedDelivery ? new Date(dto.estimatedDelivery) : undefined,
+        items: dto.items as unknown as Prisma.InputJsonValue,
+        shippingAddress:
+          order.shippingAddress as unknown as Prisma.InputJsonValue,
+        estimatedDelivery: dto.estimatedDelivery
+          ? new Date(dto.estimatedDelivery)
+          : undefined,
         status: ShippingStatus.IN_TRANSIT,
         shippedAt: new Date(),
         events: {
@@ -62,13 +74,17 @@ export class ShipmentService {
       'CREATE_SHIPMENT',
       'Shipment',
       shipment.id,
-      `Created shipment for order ${dto.orderId}`
+      `Created shipment for order ${dto.orderId}`,
     );
 
     return shipment;
   }
 
-  async addTrackingEvent(adminId: string, shipmentId: string, dto: AddTrackingEventDto) {
+  async addTrackingEvent(
+    adminId: string,
+    shipmentId: string,
+    dto: AddTrackingEventDto,
+  ) {
     const shipment = await this.prisma.shipment.findUnique({
       where: { id: shipmentId },
     });
@@ -88,11 +104,13 @@ export class ShipmentService {
     });
 
     if (dto.updateShipmentStatus) {
-      const updateData: any = { status: dto.updateShipmentStatus };
+      const updateData: Prisma.ShipmentUpdateInput = {
+        status: dto.updateShipmentStatus,
+      };
       if (dto.updateShipmentStatus === ShippingStatus.DELIVERED) {
         updateData.deliveredAt = new Date();
       }
-      
+
       await this.prisma.shipment.update({
         where: { id: shipmentId },
         data: updateData,
@@ -112,7 +130,7 @@ export class ShipmentService {
       'ADD_TRACKING_EVENT',
       'Shipment',
       shipment.id,
-      `Added tracking event: ${dto.status}`
+      `Added tracking event: ${dto.status}`,
     );
 
     return event;
@@ -144,31 +162,35 @@ export class ShipmentService {
           user: { select: { email: true, firstName: true, lastName: true } },
           shippingAddress: true,
           items: {
-            include: { variant: true },
+            include: {
+              variant: { include: { product: true } },
+            },
           },
         },
       });
 
       if (!order) return;
-
-      const recipientEmail =
-        order.user?.email ||
-        order.guestEmail;
+      const recipientEmail = order.user?.email || order.guestEmail;
       if (!recipientEmail) return;
 
       const recipientName =
-        [order.user?.firstName, order.user?.lastName].filter(Boolean).join(' ') ||
-        [order.shippingAddress?.firstName, order.shippingAddress?.lastName].filter(Boolean).join(' ') ||
+        [order.user?.firstName, order.user?.lastName]
+          .filter(Boolean)
+          .join(' ') ||
+        [order.shippingAddress?.firstName, order.shippingAddress?.lastName]
+          .filter(Boolean)
+          .join(' ') ||
         'Valued Customer';
 
-      const items = (order.items || []).map((item) => ({
+      const items = order.items.map((item) => ({
         productName: item.productName || 'Product',
         variantName: item.variantName || undefined,
         imageUrl: item.imageUrl || undefined,
-        productSlugOrId: item.variant?.productId || '',
+        productSlugOrId:
+          item.variant?.product?.slug || item.variant?.productId || '',
       }));
 
-      if (items.length > 0 && this.mail) {
+      if (items.length > 0) {
         await this.mail.sendOrderDeliveredReviewNotification(
           recipientEmail,
           order.orderNumber,
@@ -176,6 +198,8 @@ export class ShipmentService {
           items,
         );
       }
-    } catch {}
+    } catch (error) {
+      console.error(`Failed to send review email for order ${orderId}:`, error);
+    }
   }
 }

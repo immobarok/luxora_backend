@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 
@@ -13,9 +17,10 @@ export class ReviewService {
     });
 
     const reviewCount = reviews.length;
-    const avgRating = reviewCount > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
-      : 0;
+    const avgRating =
+      reviewCount > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+        : 0;
 
     await this.prisma.product.update({
       where: { id: productId },
@@ -23,61 +28,112 @@ export class ReviewService {
     });
   }
 
-  async create(userId: string, dto: CreateReviewDto) {
-    // Check if product exists
-    const product = await this.prisma.product.findUnique({
-      where: { id: dto.productId },
+  async checkEligibility(userId: string, productId: string) {
+    const product = await this.prisma.product.findFirst({
+      where: {
+        OR: [{ id: productId }, { slug: productId }],
+      },
+      select: { id: true, name: true },
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found');
+      return { canReview: false, reason: 'Product not found' };
     }
 
-    // Optional: Auto-approve for now. If you want manual approval, change status to 'PENDING'.
-    // Also, if orderId is provided, you can verify they actually bought it.
-    
-    // Check if user already reviewed this product
     const existingReview = await this.prisma.review.findFirst({
-      where: { userId, productId: dto.productId },
+      where: { userId, productId: product.id },
     });
 
     if (existingReview) {
-      throw new BadRequestException('You have already reviewed this product');
+      return {
+        canReview: false,
+        hasReviewed: true,
+        reason: 'You have already submitted a review for this product',
+      };
     }
+
+    const deliveredOrder = await this.prisma.order.findFirst({
+      where: {
+        userId,
+        status: 'DELIVERED',
+        items: {
+          some: {
+            variant: {
+              productId: product.id,
+            },
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!deliveredOrder) {
+      return {
+        canReview: false,
+        hasReviewed: false,
+        reason:
+          'Only customers who have ordered and received delivery of this product can leave a review',
+      };
+    }
+
+    return {
+      canReview: true,
+      hasReviewed: false,
+      productId: product.id,
+      orderId: deliveredOrder.id,
+    };
+  }
+
+  async create(userId: string, dto: CreateReviewDto) {
+    const eligibility = await this.checkEligibility(userId, dto.productId);
+    if (!eligibility.canReview) {
+      throw new BadRequestException(
+        eligibility.reason || 'You are not eligible to review this product',
+      );
+    }
+
+    const targetProductId = eligibility.productId || dto.productId;
 
     const review = await this.prisma.review.create({
       data: {
         userId,
-        productId: dto.productId,
-        orderId: dto.orderId,
+        productId: targetProductId,
+        orderId: eligibility.orderId || dto.orderId,
         rating: dto.rating,
         title: dto.title,
         body: dto.body,
         images: dto.images || [],
-        status: 'APPROVED', // Assuming auto-approve for simplicity
+        status: 'APPROVED',
       },
     });
 
-    // Recalculate average rating
-    await this.updateProductRating(dto.productId);
+    await this.updateProductRating(targetProductId);
 
     return review;
   }
 
   async findByProduct(productId: string) {
+    const product = await this.prisma.product.findFirst({
+      where: {
+        OR: [{ id: productId }, { slug: productId }],
+      },
+      select: { id: true },
+    });
+
+    const targetProductId = product?.id || productId;
+
     return this.prisma.review.findMany({
-      where: { productId, status: 'APPROVED' },
-      orderBy: { createdAt: 'desc' },
+      where: { productId: targetProductId, status: 'APPROVED' },
       include: {
         user: {
           select: {
-            id: true,
             firstName: true,
             lastName: true,
             avatarUrl: true,
-          }
-        }
-      }
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -90,10 +146,7 @@ export class ReviewService {
       throw new NotFoundException('Review not found');
     }
 
-    // Only allow the author (or an admin) to delete it
     if (review.userId !== userId) {
-      // If we had a strict admin check here we could allow admins to bypass this.
-      // For now, only the author can delete it (unless we pass in user role).
       throw new BadRequestException('You can only delete your own reviews');
     }
 
@@ -101,9 +154,6 @@ export class ReviewService {
       where: { id },
     });
 
-    // Recalculate average rating
     await this.updateProductRating(review.productId);
-
-    return { success: true };
   }
 }

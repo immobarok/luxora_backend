@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ReviewService } from './review.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -17,12 +26,25 @@ interface RequestWithUser extends Request {
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
+  @Get('check-eligibility/:productId')
+  @UseGuards(JwtAuthGuard)
+  async checkEligibility(
+    @Req() req: RequestWithUser,
+    @Param('productId') productId: string,
+  ) {
+    const result = await this.reviewService.checkEligibility(
+      req.user.id,
+      productId,
+    );
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
-  async create(
-    @Req() req: RequestWithUser,
-    @Body() dto: CreateReviewDto,
-  ) {
+  async create(@Req() req: RequestWithUser, @Body() dto: CreateReviewDto) {
     const review = await this.reviewService.create(req.user.id, dto);
     return {
       success: true,
@@ -44,10 +66,7 @@ export class ReviewController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  async remove(
-    @Req() req: RequestWithUser,
-    @Param('id') id: string,
-  ) {
+  async remove(@Req() req: RequestWithUser, @Param('id') id: string) {
     await this.reviewService.remove(req.user.id, id);
     return {
       success: true,
