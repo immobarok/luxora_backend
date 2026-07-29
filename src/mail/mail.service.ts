@@ -37,9 +37,7 @@ export interface SmtpConfig {
   rateLimit: number;
 }
 
-// ============================================================
-// Template Registry
-// ============================================================
+
 
 type TemplateRenderer = (context: Record<string, unknown>) => {
   html: string;
