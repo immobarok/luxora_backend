@@ -99,9 +99,10 @@ async function bootstrap() {
   }
 
   app.enableCors({
-    origin: !allowedOrigins || allowedOrigins === '*'
-      ? true // Development: allow all origins
-      : allowedOrigins.split(',').map((o) => o.trim()),
+    origin:
+      !allowedOrigins || allowedOrigins === '*'
+        ? true // Development: allow all origins
+        : allowedOrigins.split(',').map((o) => o.trim()),
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
@@ -118,8 +119,8 @@ async function bootstrap() {
   // ── Global Pipes ───────────────────────────────────────────────────
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,         // Strip unknown fields
-      transform: true,         // Auto-transform types
+      whitelist: true, // Strip unknown fields
+      transform: true, // Auto-transform types
       forbidNonWhitelisted: true, // Reject requests with unknown fields
       transformOptions: {
         enableImplicitConversion: true,
