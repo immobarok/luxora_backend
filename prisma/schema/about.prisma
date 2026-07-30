@@ -2,6 +2,7 @@ model AboutPage {
   id String @id @default(uuid())
 
   // Hero Section
+  yearTitle    String  @default("")
   heroTitle    String
   heroSubtitle String?
   heroImage    String?
@@ -9,6 +10,7 @@ model AboutPage {
   // Mission Section
   missionTitle       String
   missionDescription String
+  missionQuote       String  @default("")
   missionImage       String?
 
   // Vision
