@@ -25,6 +25,10 @@ export class AboutStatDto {
 export class UpdateAboutDto {
   @IsString()
   @IsOptional()
+  yearTitle?: string;
+
+  @IsString()
+  @IsOptional()
   heroTitle?: string;
 
   @IsString()
@@ -42,6 +46,10 @@ export class UpdateAboutDto {
   @IsString()
   @IsOptional()
   missionDescription?: string;
+
+  @IsString()
+  @IsOptional()
+  missionQuote?: string;
 
   @IsString()
   @IsOptional()
