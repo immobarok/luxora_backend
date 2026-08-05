@@ -144,7 +144,6 @@ export class AuthService {
       expiresIn: refreshExpiresIn,
     });
 
-    // Store refresh token in Redis so it can be revoked on logout/password-change
     const refreshTtlSeconds = this.parseDurationToSeconds(
       refreshExpiresIn as string,
     );
@@ -209,7 +208,9 @@ export class AuthService {
     await this.redis.del(`verify_email:${dto.email}`);
 
     // Fire-and-forget: send welcome email now that email is confirmed
-    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || dto.email.split('@')[0];
+    const fullName =
+      [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+      dto.email.split('@')[0];
     this.mail.sendWelcomeEmail(user.email, fullName).catch((err) => {
       this.logger.error(
         `Failed to send welcome email to ${user.email}`,
@@ -355,7 +356,7 @@ export class AuthService {
       if (profile.avatarUrl && user.avatarUrl !== profile.avatarUrl) {
         updateData.avatarUrl = profile.avatarUrl;
       }
-      
+
       if (Object.keys(updateData).length > 0) {
         user = await this.prisma.user.update({
           where: { id: user.id },
