@@ -1,24 +1,24 @@
-import { AuthService } from './auth.service';
-import { Public } from '../common/decorators/public.decorator';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
 import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Post,
-  Request,
   Req,
-  UseGuards,
+  Request,
   Res,
-  Headers,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
+import type { User } from '@prisma/client';
 import type { Response } from 'express';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
+import { AuthService } from './auth.service';
 import {
   ForgotPasswordDto,
   RefreshTokenDto,
@@ -32,13 +32,7 @@ import {
   ProfileEntity,
   RegisterResponseEntity,
 } from './entities';
-import type { User } from '@prisma/client';
-
-/**
- * Auth limits:
- *  - Sensitive mutations (login/register/otp): 5 requests per 60 seconds
- *  - Refresh: 20 requests per 60 seconds
- */
+import { LocalAuthGuard } from './guards/local-auth.guard';
 const AUTH_THROTTLE = { default: { limit: 5, ttl: 60_000 } };
 const REFRESH_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
@@ -67,7 +61,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokensEntity> {
     const tokens = await this.authService.login(req.user);
-    
+
     res.cookie('refresh_token', tokens.refresh_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -88,7 +82,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<MessageResponseEntity> {
     const token = authHeader?.replace(/^Bearer\s+/i, '').trim() ?? '';
-    
+
     // Clear the refresh token cookie
     res.cookie('refresh_token', '', {
       httpOnly: true,
@@ -138,7 +132,7 @@ export class AuthController {
   @Throttle(REFRESH_THROTTLE)
   @Post('refresh')
   async refresh(
-    @Req() req: any, 
+    @Req() req: any,
     @Body() dto: RefreshTokenDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokensEntity> {
@@ -146,9 +140,9 @@ export class AuthController {
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token provided');
     }
-    
+
     const tokens = await this.authService.refreshToken({ refreshToken });
-    
+
     res.cookie('refresh_token', tokens.refresh_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -156,19 +150,14 @@ export class AuthController {
       maxAge: 15 * 24 * 60 * 60 * 1000,
       path: '/api/v1/auth/refresh',
     });
-    
+
     return tokens;
   }
-
-  // ── OAuth — Google ────────────────────────────────────────────────────────
 
   @Public()
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async googleAuth(@Request() _req: any) {
-    // Passport redirects to Google
-  }
+  async googleAuth(@Request() _req: any) {}
 
   @Public()
   @Get('google/callback')
@@ -177,11 +166,8 @@ export class AuthController {
     const user = await this.authService.validateOAuthLogin(req.user);
     const tokens = await this.authService.login(user);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-
-    // ✅ Security: tokens set as HttpOnly cookies instead of query params
-    //    This prevents token leakage via browser history and server logs.
     res.cookie('access_token', tokens.access_token, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000, // 15 minutes
@@ -197,7 +183,6 @@ export class AuthController {
     return res.redirect(`${frontendUrl}/auth/callback?oauth=success`);
   }
 
-
   @Public()
   @Get('facebook')
   @UseGuards(AuthGuard('facebook'))
@@ -212,19 +197,17 @@ export class AuthController {
     const user = await this.authService.validateOAuthLogin(req.user);
     const tokens = await this.authService.login(user);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-
-    // ✅ Security: tokens set as HttpOnly cookies instead of query params
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 15 * 60 * 1000,
     });
     res.cookie('refresh_token', tokens.refresh_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/api/v1/auth/refresh',
     });
 

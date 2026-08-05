@@ -8,7 +8,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
     super({
       clientID: process.env.FACEBOOK_CLIENT_ID || 'your_facebook_client_id',
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET || 'your_facebook_client_secret',
-      callbackURL: 'http://localhost:8000/auth/facebook/callback', // We should dynamically get the host, but hardcoding for demo, adjust as needed in prod
+      callbackURL: `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/v1/auth/facebook/callback`,
       scope: ['email', 'public_profile'],
       profileFields: ['id', 'emails', 'name', 'picture.type(large)'],
     });

@@ -54,7 +54,12 @@ export class SanitizeMiddleware implements NestMiddleware {
       }
 
       if (req.query && typeof req.query === 'object') {
-        req.query = this.sanitizeObject(req.query) as Record<string, string>;
+        Object.defineProperty(req, 'query', {
+          value: this.sanitizeObject(req.query),
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
       }
     } catch (err) {
       console.error('🚨 SanitizeMiddleware Error:', err);
