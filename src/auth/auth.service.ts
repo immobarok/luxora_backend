@@ -278,7 +278,7 @@ export class AuthService {
   async refreshToken(dto: RefreshTokenDto): Promise<AuthTokensEntity> {
     let payload: JwtPayload;
     try {
-      payload = this.jwtService.verify<JwtPayload>(dto.refreshToken, {
+      payload = this.jwtService.verify<JwtPayload>(dto.refreshToken!, {
         secret: process.env.JWT_SECRET,
       });
     } catch {

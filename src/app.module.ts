@@ -52,6 +52,7 @@ import { ContactModule } from './contact/contact.module';
 import { NotificationModule } from './notification/notification.module';
 import { AdminActionModule } from './admin-action/admin-action.module';
 import { ShipmentModule } from './shipment/shipment.module';
+import { TestimonialModule } from './testimonial/testimonial.module';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { ShipmentModule } from './shipment/shipment.module';
     NotificationModule,
     AdminActionModule,
     ShipmentModule,
+    TestimonialModule,
   ],
   controllers: [AppController],
   providers: [

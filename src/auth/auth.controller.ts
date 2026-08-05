@@ -10,9 +10,11 @@ import {
   HttpStatus,
   Post,
   Request,
+  Req,
   UseGuards,
   Res,
   Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
@@ -62,8 +64,19 @@ export class AuthController {
   @Post('login')
   async login(
     @Request() req: { user: Omit<User, 'passwordHash'> },
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokensEntity> {
-    return this.authService.login(req.user);
+    const tokens = await this.authService.login(req.user);
+    
+    res.cookie('refresh_token', tokens.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 24 * 60 * 60 * 1000, // 15 days matching auth service
+      path: '/api/v1/auth/refresh',
+    });
+
+    return tokens;
   }
 
   // ── Logout ───────────────────────────────────────────────────────────────
@@ -72,8 +85,19 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(
     @Headers('authorization') authHeader: string,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<MessageResponseEntity> {
     const token = authHeader?.replace(/^Bearer\s+/i, '').trim() ?? '';
+    
+    // Clear the refresh token cookie
+    res.cookie('refresh_token', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/api/v1/auth/refresh',
+    });
+
     return this.authService.logout(token);
   }
 
@@ -113,8 +137,27 @@ export class AuthController {
   @Public()
   @Throttle(REFRESH_THROTTLE)
   @Post('refresh')
-  async refresh(@Body() dto: RefreshTokenDto): Promise<AuthTokensEntity> {
-    return this.authService.refreshToken(dto);
+  async refresh(
+    @Req() req: any, 
+    @Body() dto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthTokensEntity> {
+    const refreshToken = req.cookies?.refresh_token || dto.refreshToken;
+    if (!refreshToken) {
+      throw new UnauthorizedException('No refresh token provided');
+    }
+    
+    const tokens = await this.authService.refreshToken({ refreshToken });
+    
+    res.cookie('refresh_token', tokens.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 24 * 60 * 60 * 1000,
+      path: '/api/v1/auth/refresh',
+    });
+    
+    return tokens;
   }
 
   // ── OAuth — Google ────────────────────────────────────────────────────────
@@ -154,12 +197,10 @@ export class AuthController {
     return res.redirect(`${frontendUrl}/auth/callback?oauth=success`);
   }
 
-  // ── OAuth — Facebook ──────────────────────────────────────────────────────
 
   @Public()
   @Get('facebook')
   @UseGuards(AuthGuard('facebook'))
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async facebookAuth(@Request() _req: any) {
     // Passport redirects to Facebook
   }

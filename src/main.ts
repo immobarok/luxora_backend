@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   // ── Create Application ─────────────────────────────────────────────
@@ -42,6 +43,9 @@ async function bootstrap() {
   // Prevents attackers from sending duplicate query parameters
   // e.g. ?role=ADMIN&role=CUSTOMER → only the last value survives
   app.use(hpp());
+
+  // ── Cookie Parser ──────────────────────────────────────────────────
+  app.use(cookieParser());
 
   // ── Security Headers (Helmet) ──────────────────────────────────────
   // Applied BEFORE routes — must come before body parsers
