@@ -220,6 +220,15 @@ export class AuthService {
     return { message: 'Email verified successfully' };
   }
 
+  async getMe(userId: string): Promise<Omit<User, 'passwordHash'>> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new UnauthorizedException('User not found');
+    const { passwordHash, ...result } = user;
+    return result;
+  }
+
   async forgotPassword(dto: ForgotPasswordDto): Promise<MessageResponseEntity> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -337,15 +346,20 @@ export class AuthService {
         },
       });
     } else {
+      const updateData: any = {};
       if (profile.provider === 'google' && !user.googleId) {
-        user = await this.prisma.user.update({
-          where: { id: user.id },
-          data: { googleId: profile.providerId },
-        });
+        updateData.googleId = profile.providerId;
       } else if (profile.provider === 'facebook' && !user.facebookId) {
+        updateData.facebookId = profile.providerId;
+      }
+      if (profile.avatarUrl && user.avatarUrl !== profile.avatarUrl) {
+        updateData.avatarUrl = profile.avatarUrl;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
         user = await this.prisma.user.update({
           where: { id: user.id },
-          data: { facebookId: profile.providerId },
+          data: updateData,
         });
       }
     }

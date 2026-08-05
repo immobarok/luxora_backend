@@ -217,7 +217,7 @@ export class AuthController {
   // ── Profile ───────────────────────────────────────────────────────────────
 
   @Get('me')
-  getProfile(@CurrentUser() user: ProfileEntity): ProfileEntity {
-    return user;
+  async getProfile(@CurrentUser() user: ProfileEntity) {
+    return this.authService.getMe(user.id);
   }
 }
