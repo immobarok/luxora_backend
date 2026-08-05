@@ -73,8 +73,6 @@ export class AuthController {
     return tokens;
   }
 
-  // ── Logout ───────────────────────────────────────────────────────────────
-
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
@@ -95,8 +93,6 @@ export class AuthController {
     return this.authService.logout(token);
   }
 
-  // ── Email Verification ────────────────────────────────────────────────────
-
   @Public()
   @Throttle(AUTH_THROTTLE)
   @Post('verify-email')
@@ -105,8 +101,6 @@ export class AuthController {
   ): Promise<MessageResponseEntity> {
     return this.authService.verifyEmail(dto);
   }
-
-  // ── Forgot / Reset Password ───────────────────────────────────────────────
 
   @Public()
   @Throttle(AUTH_THROTTLE)
