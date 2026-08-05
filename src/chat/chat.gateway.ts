@@ -22,8 +22,9 @@ interface JwtPayload {
 }
 
 interface ChatSocketUser {
-  id: string;
-  role: Role;
+  id?: string;
+  guestId?: string;
+  role: Role | 'GUEST';
 }
 
 interface AuthenticatedSocket extends Socket {
@@ -57,17 +58,24 @@ export class ChatGateway
   handleConnection(client: AuthenticatedSocket) {
     try {
       const token = this.extractToken(client);
-      if (!token) {
-        client.emit('chat.error', { message: 'Unauthorized: token missing' });
+      const guestId = client.handshake.auth?.guestId as string | undefined;
+
+      if (!token && !guestId) {
+        client.emit('chat.error', { message: 'Unauthorized: missing token or guestId' });
         client.disconnect();
         return;
       }
 
-      const payload = this.jwtService.verify<JwtPayload>(token, {
-        secret: process.env.JWT_SECRET,
-      });
-      client.data.user = { id: payload.sub, role: payload.role };
-      this.logger.debug(`Socket connected: ${client.id} user=${payload.sub}`);
+      if (token) {
+        const payload = this.jwtService.verify<JwtPayload>(token, {
+          secret: process.env.JWT_SECRET,
+        });
+        client.data.user = { id: payload.sub, role: payload.role, guestId };
+        this.logger.debug(`Socket connected: ${client.id} user=${payload.sub}`);
+      } else {
+        client.data.user = { guestId, role: 'GUEST' };
+        this.logger.debug(`Socket connected: ${client.id} guest=${guestId}`);
+      }
     } catch {
       client.emit('chat.error', { message: 'Unauthorized: invalid token' });
       client.disconnect();
@@ -107,7 +115,7 @@ export class ChatGateway
     const user = this.requireUser(client);
     const message = await this.chatService.sendMessage(
       body.roomId,
-      user.id,
+      user,
       body.content,
       body.messageType || 'TEXT',
     );
@@ -127,7 +135,7 @@ export class ChatGateway
     const result = await this.chatService.markMessagesRead(body.roomId, user);
     this.server.to(this.getRoomChannel(body.roomId)).emit('chat.read', {
       roomId: body.roomId,
-      readerId: user.id,
+      readerId: user.id || user.guestId,
     });
     return result;
   }

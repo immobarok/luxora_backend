@@ -1,17 +1,19 @@
 model SupportChatRoom {
   id            String    @id @default(cuid())
-  customerId    String
+  customerId    String?
+  guestId       String?
   supportId     String?
   status        String    @default("OPEN")
   lastMessageAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  customer User                 @relation("CustomerChatRooms", fields: [customerId], references: [id], onDelete: Cascade)
+  customer User?                @relation("CustomerChatRooms", fields: [customerId], references: [id], onDelete: Cascade)
   support  User?                @relation("SupportChatRooms", fields: [supportId], references: [id], onDelete: SetNull)
   messages SupportChatMessage[]
 
   @@index([customerId])
+  @@index([guestId])
   @@index([supportId])
   @@index([status])
   @@index([lastMessageAt])
@@ -21,16 +23,18 @@ model SupportChatRoom {
 model SupportChatMessage {
   id          String   @id @default(cuid())
   roomId      String
-  senderId    String
+  senderId    String?
+  guestId     String?
   content     String   @db.Text
   messageType String   @default("TEXT")
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   room   SupportChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  sender User            @relation("UserChatMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  sender User?           @relation("UserChatMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([roomId, createdAt])
   @@index([senderId])
+  @@index([guestId])
   @@map("support_chat_messages")
 }

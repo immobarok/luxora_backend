@@ -398,30 +398,15 @@ export class DashboardService {
           createdAt: { gte: previousStart, lt: currentStart },
         },
       }),
-      this.prisma.orderItem.aggregate({
-        _sum: { quantity: true },
+      this.prisma.productView.count(),
+      this.prisma.productView.count({
         where: {
-          order: {
-            status: { not: OrderStatus.CANCELLED },
-          },
+          viewedAt: { gte: currentStart, lte: now },
         },
       }),
-      this.prisma.orderItem.aggregate({
-        _sum: { quantity: true },
+      this.prisma.productView.count({
         where: {
-          order: {
-            status: { not: OrderStatus.CANCELLED },
-            placedAt: { gte: currentStart, lte: now },
-          },
-        },
-      }),
-      this.prisma.orderItem.aggregate({
-        _sum: { quantity: true },
-        where: {
-          order: {
-            status: { not: OrderStatus.CANCELLED },
-            placedAt: { gte: previousStart, lt: currentStart },
-          },
+          viewedAt: { gte: previousStart, lt: currentStart },
         },
       }),
       this.prisma.order.aggregate({
@@ -446,9 +431,9 @@ export class DashboardService {
       }),
     ]);
 
-    const totalProductViews = totalEngagement._sum.quantity ?? 0;
-    const currentProductViews = currentEngagement._sum.quantity ?? 0;
-    const previousProductViews = previousEngagement._sum.quantity ?? 0;
+    const totalProductViews = totalEngagement;
+    const currentProductViews = currentEngagement;
+    const previousProductViews = previousEngagement;
 
     const averageOrders = this.decimalToNumber(avgOrderAllTime._avg.grandTotal);
     const currentAverageOrders = this.decimalToNumber(
@@ -481,7 +466,6 @@ export class DashboardService {
             currentProductViews,
             previousProductViews,
           ),
-          note: 'Derived from sold item quantity because product view tracking is not stored yet.',
         },
         averageOrders: {
           value: averageOrders,

@@ -57,6 +57,18 @@ export class CreateCouponDto {
   @Min(1)
   @IsOptional()
   @Type(() => Number)
+  buyQuantity?: number;
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  getQuantity?: number;
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  @Type(() => Number)
   usageLimit?: number;
 
   @IsInt()

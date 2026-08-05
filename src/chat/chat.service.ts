@@ -8,18 +8,23 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface ChatUserContext {
-  id: string;
-  role: Role;
+  id?: string;
+  guestId?: string;
+  role: Role | 'GUEST';
 }
 
 @Injectable()
 export class ChatService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createOrGetCustomerRoom(customerId: string, initialMessage?: string) {
+  async createOrGetCustomerRoom(customerId?: string, guestId?: string, initialMessage?: string) {
+    if (!customerId && !guestId) {
+      throw new BadRequestException('Must provide either customerId or guestId');
+    }
+    
     let room = await this.prisma.supportChatRoom.findFirst({
       where: {
-        customerId,
+        ...(customerId ? { customerId } : { guestId }),
         status: { in: ['OPEN', 'IN_PROGRESS'] },
       },
       include: {
@@ -35,7 +40,7 @@ export class ChatService {
 
     if (!room) {
       room = await this.prisma.supportChatRoom.create({
-        data: { customerId, status: 'OPEN' },
+        data: { customerId, guestId, status: 'OPEN' },
         include: {
           customer: {
             select: { id: true, firstName: true, lastName: true, email: true },
@@ -50,7 +55,7 @@ export class ChatService {
     if (initialMessage?.trim()) {
       await this.sendMessage(
         room.id,
-        customerId,
+        { id: customerId, guestId, role: customerId ? Role.CUSTOMER : 'GUEST' },
         initialMessage.trim(),
         'TEXT',
       );
@@ -58,14 +63,15 @@ export class ChatService {
 
     return this.getRoomByIdForUser(room.id, {
       id: customerId,
-      role: Role.CUSTOMER,
+      guestId,
+      role: customerId ? Role.CUSTOMER : 'GUEST',
     });
   }
 
   async listRoomsForUser(user: ChatUserContext) {
-    if (user.role === Role.CUSTOMER) {
+    if (user.role === Role.CUSTOMER || user.role === 'GUEST') {
       return this.prisma.supportChatRoom.findMany({
-        where: { customerId: user.id },
+        where: user.id ? { customerId: user.id } : { guestId: user.guestId },
         include: {
           customer: {
             select: { id: true, firstName: true, lastName: true, email: true },
@@ -134,11 +140,11 @@ export class ChatService {
     });
     if (!room) throw new NotFoundException('Chat room not found');
 
-    if (actor.role === Role.CUSTOMER && room.customerId !== actor.id) {
+    if ((actor.role === Role.CUSTOMER || actor.role === 'GUEST') && room.customerId !== actor.id && room.guestId !== actor.guestId) {
       throw new ForbiddenException('You cannot close this room');
     }
     if (
-      actor.role !== Role.CUSTOMER &&
+      actor.role !== Role.CUSTOMER && actor.role !== 'GUEST' &&
       room.supportId &&
       room.supportId !== actor.id
     ) {
@@ -184,7 +190,7 @@ export class ChatService {
 
   async sendMessage(
     roomId: string,
-    senderId: string,
+    sender: ChatUserContext,
     content: string,
     messageType = 'TEXT',
   ) {
@@ -195,18 +201,21 @@ export class ChatService {
     if (room.status === 'CLOSED')
       throw new BadRequestException('Chat room is closed');
 
-    const sender = await this.prisma.user.findUnique({
-      where: { id: senderId },
-      select: { id: true, role: true },
-    });
-    if (!sender) throw new NotFoundException('Sender not found');
+    if (sender.role !== 'GUEST' && sender.id) {
+      const userSender = await this.prisma.user.findUnique({
+        where: { id: sender.id },
+        select: { id: true, role: true },
+      });
+      if (!userSender) throw new NotFoundException('Sender not found');
+    }
 
-    this.ensureRoomAccess(room, { id: sender.id, role: sender.role });
+    this.ensureRoomAccess(room, sender);
 
     const message = await this.prisma.supportChatMessage.create({
       data: {
         roomId,
-        senderId,
+        senderId: sender.id,
+        guestId: sender.guestId,
         content,
         messageType,
       },
@@ -227,10 +236,13 @@ export class ChatService {
 
   async markMessagesRead(roomId: string, user: ChatUserContext) {
     await this.getRoomByIdForUser(roomId, user);
+    
+    const senderWhere = user.id ? { not: user.id } : { not: null };
+
     await this.prisma.supportChatMessage.updateMany({
       where: {
         roomId,
-        senderId: { not: user.id },
+        senderId: senderWhere,
         isRead: false,
       },
       data: { isRead: true },
@@ -238,8 +250,8 @@ export class ChatService {
     return { roomId, read: true };
   }
 
-  private ensureSupportRole(role: Role): void {
-    if (!this.isSupportRole(role)) {
+  private ensureSupportRole(role: Role | 'GUEST'): void {
+    if (role === 'GUEST' || !this.isSupportRole(role)) {
       throw new ForbiddenException(
         'Only support/admin can perform this action',
       );
@@ -247,11 +259,11 @@ export class ChatService {
   }
 
   private ensureRoomAccess(
-    room: { customerId: string; supportId: string | null },
+    room: { customerId: string | null; guestId: string | null; supportId: string | null },
     user: ChatUserContext,
   ): void {
-    if (user.role === Role.CUSTOMER) {
-      if (room.customerId !== user.id) {
+    if (user.role === Role.CUSTOMER || user.role === 'GUEST') {
+      if ((room.customerId && room.customerId !== user.id) || (room.guestId && room.guestId !== user.guestId) || (!room.customerId && !room.guestId)) {
         throw new ForbiddenException('You cannot access this room');
       }
       return;
@@ -273,7 +285,7 @@ export class ChatService {
     throw new ForbiddenException('You cannot access this room');
   }
 
-  private isSupportRole(role: Role): boolean {
+  private isSupportRole(role: Role | 'GUEST'): boolean {
     return (
       role === Role.SUPPORT || role === Role.ADMIN || role === Role.SUPER_ADMIN
     );

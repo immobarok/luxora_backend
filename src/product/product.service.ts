@@ -1460,4 +1460,20 @@ export class ProductService {
     }
     return value;
   }
+
+  async trackView(productId: string, userId?: string) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return this.prisma.productView.create({
+      data: {
+        productId,
+        userId: userId || null,
+      },
+    });
+  }
 }

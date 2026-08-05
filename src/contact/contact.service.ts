@@ -22,20 +22,15 @@ export class ContactService {
       },
     });
 
-    // Send a confirmation email using the MailService
-    // Since the MailService might not have a specific contact template yet,
-    // we just use sendMail (if it exists) or a generic one.
-    // I'll wrap in try-catch so it doesn't fail the request if mail is unconfigured.
-    // try {
-    //   await this.mailService.sendEmail({
-    //     to: dto.email,
-    //     subject: 'We received your message!',
-    //     // @ts-ignore - Need to add a generic template to MailService
-    //     html: `<p>Hi ${dto.fullName},</p><p>We have received your message regarding "${dto.subject}". Our support team will get back to you shortly.</p>`,
-    //   });
-    // } catch (e) {
-    //   console.warn('Failed to send contact confirmation email:', e);
-    // }
+    try {
+      await this.mailService.sendContactConfirmation(
+        dto.email,
+        dto.fullName,
+        dto.subject,
+      );
+    } catch (e) {
+      console.warn('Failed to send contact confirmation email:', e);
+    }
 
     return message;
   }

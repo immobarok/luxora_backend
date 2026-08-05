@@ -21,6 +21,7 @@ export enum EmailTemplate {
   ORDER_CONFIRMATION = 'order-confirmation',
   PASSWORD_CHANGED = 'password-changed',
   ORDER_DELIVERED_REVIEW = 'order-delivered-review',
+  CONTACT_CONFIRMATION = 'contact-confirmation',
 }
 
 export interface SmtpConfig {
@@ -1099,6 +1100,51 @@ function orderDeliveredReviewTemplate(ctx: Record<string, unknown>): { html: str
 }
 
 // ============================================================
+// 7. CONTACT CONFIRMATION
+// ============================================================
+function contactConfirmationTemplate(ctx: Record<string, unknown>): { html: string; text: string } {
+  const name = str(ctx, 'name', 'there');
+  const subject = str(ctx, 'subject', 'your message');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>We received your message</title>
+  <style>${BASE_CSS}</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <div class="email-card">
+    <div class="email-header">
+      <div class="brand-name">Luxora</div>
+    </div>
+    <div class="email-body">
+      <h1 class="greeting">Hello ${name},</h1>
+      <p class="paragraph">
+        We have successfully received your message regarding "${subject}".
+        Our support team will review your inquiry and get back to you as soon as possible.
+      </p>
+      <p class="paragraph">
+        Thank you for getting in touch with us!
+      </p>
+    </div>
+    <div class="email-footer">
+      <p class="footer-text">
+        © ${new Date().getFullYear()} Luxora. All rights reserved.
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
+
+  const text = `Hello ${name},\n\nWe have successfully received your message regarding "${subject}".\nOur support team will review your inquiry and get back to you as soon as possible.\n\nThank you for getting in touch with us!\n\n© ${new Date().getFullYear()} Luxora. All rights reserved.`;
+
+  return { html, text };
+}
+
+// ============================================================
 // Template Registry Map
 // ============================================================
 const templates: Record<EmailTemplate, TemplateRenderer> = {
@@ -1108,6 +1154,7 @@ const templates: Record<EmailTemplate, TemplateRenderer> = {
   [EmailTemplate.ORDER_CONFIRMATION]: orderConfirmationTemplate,
   [EmailTemplate.PASSWORD_CHANGED]: passwordChangedTemplate,
   [EmailTemplate.ORDER_DELIVERED_REVIEW]: orderDeliveredReviewTemplate,
+  [EmailTemplate.CONTACT_CONFIRMATION]: contactConfirmationTemplate,
 };
 
 function formatAddressField(address: Mail.Address): string {
@@ -1413,6 +1460,19 @@ export class MailService implements OnModuleInit {
         orderNumber,
         items: formattedItems,
       },
+    });
+  }
+
+  async sendContactConfirmation(
+    email: string,
+    name: string,
+    subject: string,
+  ): Promise<void> {
+    await this.sendEmail({
+      to: email,
+      subject: 'We received your message!',
+      template: EmailTemplate.CONTACT_CONFIRMATION,
+      context: { name, subject },
     });
   }
 }

@@ -109,6 +109,7 @@ async function bootstrap() {
       'Authorization',
       'X-Correlation-Id',
       'X-Requested-With',
+      'X-Guest-Id',
       'Accept',
     ],
     exposedHeaders: ['X-Correlation-Id'],

@@ -13,6 +13,7 @@ import { Role as PrismaRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Role, Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { ChatService } from './chat.service';
 import {
   AssignChatRoomDto,
@@ -21,7 +22,16 @@ import {
 } from './dto';
 
 interface RequestWithUser extends Request {
-  user: { id: string; role: PrismaRole };
+  user?: { id: string; role: PrismaRole };
+  headers: import('http').IncomingHttpHeaders;
+}
+
+function getChatUser(req: RequestWithUser): import('./chat.service').ChatUserContext {
+  const guestId = req.headers['x-guest-id'] as string;
+  if (req.user) {
+    return { id: req.user.id, role: req.user.role, guestId };
+  }
+  return { guestId, role: 'GUEST' };
 }
 
 @Controller('chat')
@@ -29,45 +39,42 @@ interface RequestWithUser extends Request {
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  @Public()
   @Get('rooms')
   async getMyRooms(@Req() req: RequestWithUser) {
-    return this.chatService.listRoomsForUser({
-      id: req.user.id,
-      role: req.user.role,
-    });
+    return this.chatService.listRoomsForUser(getChatUser(req));
   }
 
+  @Public()
   @Post('rooms')
-  @Roles(Role.CUSTOMER)
   async createCustomerRoom(
     @Req() req: RequestWithUser,
     @Body() dto: CreateChatRoomDto,
   ) {
+    const user = getChatUser(req);
     return this.chatService.createOrGetCustomerRoom(
-      req.user.id,
+      user.id,
+      user.guestId,
       dto.initialMessage,
     );
   }
 
+  @Public()
   @Get('rooms/:roomId')
   async getRoom(@Req() req: RequestWithUser, @Param('roomId') roomId: string) {
-    return this.chatService.getRoomByIdForUser(roomId, {
-      id: req.user.id,
-      role: req.user.role,
-    });
+    return this.chatService.getRoomByIdForUser(roomId, getChatUser(req));
   }
 
+  @Public()
   @Get('rooms/:roomId/messages')
   async getMessages(
     @Req() req: RequestWithUser,
     @Param('roomId') roomId: string,
   ) {
-    return this.chatService.getMessages(roomId, {
-      id: req.user.id,
-      role: req.user.role,
-    });
+    return this.chatService.getMessages(roomId, getChatUser(req));
   }
 
+  @Public()
   @Post('rooms/:roomId/messages')
   async sendMessage(
     @Req() req: RequestWithUser,
@@ -76,18 +83,16 @@ export class ChatController {
   ) {
     return this.chatService.sendMessage(
       roomId,
-      req.user.id,
+      getChatUser(req),
       dto.content,
       dto.messageType || 'TEXT',
     );
   }
 
+  @Public()
   @Patch('rooms/:roomId/read')
   async markRead(@Req() req: RequestWithUser, @Param('roomId') roomId: string) {
-    return this.chatService.markMessagesRead(roomId, {
-      id: req.user.id,
-      role: req.user.role,
-    });
+    return this.chatService.markMessagesRead(roomId, getChatUser(req));
   }
 
   @Patch('rooms/:roomId/assign')
@@ -99,19 +104,17 @@ export class ChatController {
   ) {
     return this.chatService.assignRoom(
       roomId,
-      { id: req.user.id, role: req.user.role },
+      getChatUser(req),
       dto.supportId,
     );
   }
 
+  @Public()
   @Patch('rooms/:roomId/close')
   async closeRoom(
     @Req() req: RequestWithUser,
     @Param('roomId') roomId: string,
   ) {
-    return this.chatService.closeRoom(roomId, {
-      id: req.user.id,
-      role: req.user.role,
-    });
+    return this.chatService.closeRoom(roomId, getChatUser(req));
   }
 }

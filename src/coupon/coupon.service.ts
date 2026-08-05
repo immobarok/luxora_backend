@@ -46,6 +46,8 @@ export class CouponService {
         maxDiscount: dto.maxDiscount,
         appliesTo: (dto.appliesTo || 'ALL').toUpperCase(),
         targetIds: dto.targetIds ?? [],
+        buyQuantity: dto.buyQuantity,
+        getQuantity: dto.getQuantity,
         usageLimit: dto.usageLimit,
         perUserLimit: dto.perUserLimit,
         startsAt: new Date(dto.startsAt),
@@ -80,6 +82,8 @@ export class CouponService {
         maxDiscount: dto.maxDiscount,
         appliesTo: dto.appliesTo?.toUpperCase(),
         targetIds: dto.targetIds,
+        buyQuantity: dto.buyQuantity,
+        getQuantity: dto.getQuantity,
         usageLimit: dto.usageLimit,
         perUserLimit: dto.perUserLimit,
         startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
@@ -148,7 +152,7 @@ export class CouponService {
     );
     const eligibleSubtotal = this.getEligibleSubtotal(cart, coupon);
 
-    if (eligibleSubtotal <= 0) {
+    if (eligibleSubtotal <= 0 && coupon.type !== DiscountType.BUNDLE) {
       throw new BadRequestException('Coupon is not applicable for cart items');
     }
 
@@ -166,6 +170,67 @@ export class CouponService {
       discountAmount = Math.min(coupon.value.toNumber(), eligibleSubtotal);
     } else if (coupon.type === DiscountType.FREE_SHIPPING) {
       discountAmount = cart.shippingTotal.toNumber();
+    } else if (coupon.type === DiscountType.BUNDLE) {
+      const cartProductIds = new Set(
+        cart.items.map((item) => item.variant.product.id),
+      );
+      const hasAllTargets = coupon.targetIds.every((id) =>
+        cartProductIds.has(id),
+      );
+      if (!hasAllTargets || coupon.targetIds.length === 0) {
+        throw new BadRequestException(
+          'Your cart must contain all items in the bundle to use this coupon',
+        );
+      }
+      discountAmount = Math.min(coupon.value.toNumber(), eligibleSubtotal);
+    } else if (coupon.type === DiscountType.BUY_X_GET_Y) {
+      if (!coupon.buyQuantity || !coupon.getQuantity) {
+        throw new BadRequestException('Invalid BUY_X_GET_Y configuration');
+      }
+      const targetIdsSet = new Set(coupon.targetIds);
+      let eligibleItems = cart.items;
+      if (coupon.appliesTo === 'PRODUCT' && targetIdsSet.size > 0) {
+        eligibleItems = cart.items.filter((item) =>
+          targetIdsSet.has(item.variant.product.id),
+        );
+      } else if (coupon.appliesTo === 'CATEGORY' && targetIdsSet.size > 0) {
+        eligibleItems = cart.items.filter((item) =>
+          item.variant.product.categories.some((c) =>
+            targetIdsSet.has(c.categoryId),
+          ),
+        );
+      } else if (coupon.appliesTo === 'BRAND' && targetIdsSet.size > 0) {
+        eligibleItems = cart.items.filter((item) =>
+          targetIdsSet.has(item.variant.product.brandId as string),
+        );
+      }
+
+      const totalEligibleQuantity = eligibleItems.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
+      const requiredQuantity = coupon.buyQuantity + coupon.getQuantity;
+      const groups = Math.floor(totalEligibleQuantity / requiredQuantity);
+
+      if (groups === 0) {
+        throw new BadRequestException(
+          `You must have at least ${requiredQuantity} eligible items in cart to use this coupon`,
+        );
+      }
+
+      let remainingGetItems = groups * coupon.getQuantity;
+      const sortedItems: number[] = [];
+      for (const item of eligibleItems) {
+        for (let i = 0; i < item.quantity; i++) {
+          sortedItems.push(item.unitPrice.toNumber());
+        }
+      }
+      sortedItems.sort((a, b) => a - b);
+
+      for (let i = 0; i < remainingGetItems && i < sortedItems.length; i++) {
+        // For BUY_X_GET_Y, value is typically the percentage off the "GET" items
+        discountAmount += sortedItems[i] * (coupon.value.toNumber() / 100);
+      }
     } else {
       throw new BadRequestException(
         `Coupon type ${coupon.type} is not supported yet`,

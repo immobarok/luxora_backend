@@ -98,6 +98,7 @@ model Product {
   attributes    ProductAttribute[]
   reviews       Review[]
   wishlistItems WishlistItem[]
+  views         ProductView[]
 
   @@index([slug])
   @@index([createdBy])
@@ -130,8 +131,22 @@ model ProductAttribute {
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@unique([productId, name])
   @@index([productId])
   @@map("product_attributes")
+}
+
+model ProductView {
+  id        String   @id @default(cuid())
+  productId String
+  userId    String?
+  viewedAt  DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([viewedAt])
+  @@map("product_views")
 }
 
 model ProductVariant {

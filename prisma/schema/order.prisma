@@ -342,6 +342,9 @@ model Coupon {
   appliesTo String   @default("ALL")
   targetIds String[]
 
+  buyQuantity Int?
+  getQuantity Int?
+
   usageLimit   Int?
   usageCount   Int  @default(0)
   perUserLimit Int?

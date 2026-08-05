@@ -228,6 +228,16 @@ export class ProductController {
     await this.productService.remove(id, req.user.id, true);
   }
 
+  @Post(':id/view')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage('Product view tracked successfully')
+  async trackView(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const userId = req.user?.id;
+    await this.productService.trackView(id, userId);
+    return { success: true };
+  }
+
   private normalizeLimit(limit?: string): number {
     const parsed = Number.parseInt(limit ?? '8', 10);
     if (Number.isNaN(parsed)) {

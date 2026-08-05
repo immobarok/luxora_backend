@@ -27,6 +27,12 @@ export class UpdateCouponDto implements Partial<CreateCouponDto> {
   targetIds?: string[];
 
   @IsOptional()
+  buyQuantity?: number;
+
+  @IsOptional()
+  getQuantity?: number;
+
+  @IsOptional()
   usageLimit?: number;
 
   @IsOptional()
